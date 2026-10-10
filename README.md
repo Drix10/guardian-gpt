@@ -21,11 +21,9 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 
 ## 🎬 Demo video (67 s)
 
-<video src="https://github.com/Drix10/guardian-gpt/raw/main/media/guardian-demo.mp4" poster="media/guardian-demo-poster.jpg" controls muted playsinline width="100%"></video>
+[![Guardian demo: a live-call payment held from phone signals alone, blocked by family, then the same check in Hindi](media/guardian-demo-preview.gif)](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4)
 
-[![Guardian demo video: a held ₹4,50,000 payment on the family dashboard](media/guardian-demo-poster.jpg)](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4)
-
-If the player above doesn't load, click the image or [watch the video here](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4) ([download MP4](media/guardian-demo.mp4)).
+*Preview above plays at 3x speed.* **[▶ Watch the full 67-second demo with captions](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4)** or [download the MP4](media/guardian-demo.mp4).
 
 
 ---

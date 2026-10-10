@@ -16,8 +16,8 @@ app.use((req, res, next) => {
 
 app.post("/api/check", async (req, res) => {
   try {
-    const { payment, context, images, language } = req.body;
-    const item = store.record(await assess({ payment, context, images, language }));
+    const { payment, context, images, language, situation } = req.body;
+    const item = store.record(await assess({ payment, context, images, language, situation }));
     res.json(item);
   } catch (err) {
     console.error("[check]", err);

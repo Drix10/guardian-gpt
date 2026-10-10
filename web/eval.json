@@ -1,5 +1,5 @@
 {
-  "n": 30,
+  "n": 38,
   "hold": {
     "threshold": 0.8,
     "recall": 1,
@@ -14,16 +14,22 @@
     "precision": 1,
     "accuracy": 1
   },
-  "scamTypeAccuracy": 1,
+  "scamTypeAccuracy": 0.8666666666666667,
+  "untyped": {
+    "scams": 4,
+    "held": 4,
+    "legit": 4,
+    "wronglyHeld": 0
+  },
   "latencyMs": {
-    "median": 185,
-    "p95": 371
+    "median": 184,
+    "p95": 285
   },
   "costPerCheckUsd": null,
   "reliability": [
     {
       "bin": "0.0–0.2",
-      "n": 15,
+      "n": 19,
       "actualScamRate": 0
     },
     {
@@ -43,7 +49,7 @@
     },
     {
       "bin": "0.8–1.0",
-      "n": 15,
+      "n": 19,
       "actualScamRate": 1
     }
   ],
@@ -55,8 +61,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 290,
-      "source": "decisions"
+      "ms": 243,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s02",
@@ -65,8 +72,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 332,
-      "source": "decisions"
+      "ms": 285,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s03",
@@ -75,8 +83,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 371,
-      "source": "decisions"
+      "ms": 243,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s04",
@@ -85,8 +94,9 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "investment_trading",
-      "ms": 282,
-      "source": "decisions"
+      "ms": 303,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s05",
@@ -95,8 +105,9 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "investment_trading",
-      "ms": 364,
-      "source": "decisions"
+      "ms": 280,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s06",
@@ -104,9 +115,10 @@
       "scam_type": "investment_trading",
       "probability": 1,
       "verdict": "hold",
-      "scam_type_pred": "investment_trading",
-      "ms": 338,
-      "source": "decisions"
+      "scam_type_pred": "romance_or_job",
+      "ms": 260,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s07",
@@ -115,8 +127,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "kyc_phishing",
-      "ms": 376,
-      "source": "decisions"
+      "ms": 250,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s08",
@@ -125,8 +138,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "kyc_phishing",
-      "ms": 308,
-      "source": "decisions"
+      "ms": 275,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s09",
@@ -135,8 +149,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "refund_collect_request",
-      "ms": 155,
-      "source": "decisions"
+      "ms": 140,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s10",
@@ -145,8 +160,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "refund_collect_request",
-      "ms": 158,
-      "source": "decisions"
+      "ms": 184,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s11",
@@ -155,8 +171,9 @@
       "probability": 0.98,
       "verdict": "hold",
       "scam_type_pred": "family_impersonation",
-      "ms": 137,
-      "source": "decisions"
+      "ms": 184,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s12",
@@ -164,9 +181,10 @@
       "scam_type": "family_impersonation",
       "probability": 0.99,
       "verdict": "hold",
-      "scam_type_pred": "family_impersonation",
-      "ms": 185,
-      "source": "decisions"
+      "scam_type_pred": "unclear_pattern",
+      "ms": 143,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s13",
@@ -175,8 +193,9 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "romance_or_job",
-      "ms": 180,
-      "source": "decisions"
+      "ms": 188,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s14",
@@ -185,18 +204,20 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "romance_or_job",
-      "ms": 172,
-      "source": "decisions"
+      "ms": 184,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "s15",
       "label": "scam",
       "scam_type": "agent_checkout_fraud",
-      "probability": 0.99,
+      "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "agent_checkout_fraud",
-      "ms": 180,
-      "source": "decisions"
+      "ms": 198,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l01",
@@ -205,18 +226,20 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 133,
-      "source": "decisions"
+      "ms": 219,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l02",
       "label": "legit",
       "scam_type": "legitimate",
-      "probability": 0.03,
+      "probability": 0.04,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 282,
-      "source": "decisions"
+      "ms": 153,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l03",
@@ -225,18 +248,20 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 225,
-      "source": "decisions"
+      "ms": 152,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l04",
       "label": "legit",
       "scam_type": "legitimate",
-      "probability": 0.07,
+      "probability": 0.06,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 172,
-      "source": "decisions"
+      "ms": 119,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l05",
@@ -245,8 +270,9 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 188,
-      "source": "decisions"
+      "ms": 169,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l06",
@@ -255,18 +281,20 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 153,
-      "source": "decisions"
+      "ms": 265,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l07",
       "label": "legit",
       "scam_type": "legitimate",
-      "probability": 0.05,
+      "probability": 0.03,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 159,
-      "source": "decisions"
+      "ms": 124,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l08",
@@ -275,8 +303,9 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 186,
-      "source": "decisions"
+      "ms": 153,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l09",
@@ -285,8 +314,9 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 210,
-      "source": "decisions"
+      "ms": 260,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l10",
@@ -295,8 +325,9 @@
       "probability": 0.02,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 154,
-      "source": "decisions"
+      "ms": 186,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l11",
@@ -305,8 +336,9 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 179,
-      "source": "decisions"
+      "ms": 200,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l12",
@@ -315,8 +347,9 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 200,
-      "source": "decisions"
+      "ms": 158,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l13",
@@ -326,7 +359,8 @@
       "verdict": "allow",
       "scam_type_pred": "legitimate",
       "ms": 154,
-      "source": "decisions"
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l14",
@@ -335,8 +369,9 @@
       "probability": 0.13,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 184,
-      "source": "decisions"
+      "ms": 199,
+      "source": "decisions",
+      "typed": true
     },
     {
       "id": "l15",
@@ -345,9 +380,98 @@
       "probability": 0.02,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 179,
-      "source": "decisions"
+      "ms": 206,
+      "source": "decisions",
+      "typed": true
+    },
+    {
+      "id": "n01",
+      "label": "scam",
+      "scam_type": "digital_arrest",
+      "probability": 1,
+      "verdict": "hold",
+      "scam_type_pred": "unclear_pattern",
+      "ms": 184,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n02",
+      "label": "scam",
+      "scam_type": "kyc_phishing",
+      "probability": 0.99,
+      "verdict": "hold",
+      "scam_type_pred": "unclear_pattern",
+      "ms": 180,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n03",
+      "label": "scam",
+      "scam_type": "investment_trading",
+      "probability": 0.94,
+      "verdict": "hold",
+      "scam_type_pred": "unclear_pattern",
+      "ms": 161,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n04",
+      "label": "scam",
+      "scam_type": "kyc_phishing",
+      "probability": 0.99,
+      "verdict": "hold",
+      "scam_type_pred": "unclear_pattern",
+      "ms": 173,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n05",
+      "label": "legit",
+      "scam_type": "legitimate",
+      "probability": 0.08,
+      "verdict": "allow",
+      "scam_type_pred": "legitimate",
+      "ms": 122,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n06",
+      "label": "legit",
+      "scam_type": "legitimate",
+      "probability": 0.05,
+      "verdict": "allow",
+      "scam_type_pred": "legitimate",
+      "ms": 209,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n07",
+      "label": "legit",
+      "scam_type": "legitimate",
+      "probability": 0.06,
+      "verdict": "allow",
+      "scam_type_pred": "legitimate",
+      "ms": 139,
+      "source": "decisions",
+      "typed": false
+    },
+    {
+      "id": "n08",
+      "label": "legit",
+      "scam_type": "legitimate",
+      "probability": 0.12,
+      "verdict": "allow",
+      "scam_type_pred": "legitimate",
+      "ms": 139,
+      "source": "decisions",
+      "typed": false
     }
   ],
-  "generatedAt": "2026-10-10T05:40:19.531Z"
+  "generatedAt": "2026-10-10T06:40:38.596Z"
 }

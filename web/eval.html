@@ -15,8 +15,8 @@
   <nav><a href="/">Pay app</a><a href="/family.html">Family dashboard</a><a href="/eval.html" class="on">Accuracy</a></nav>
 </header>
 <div class="wrap">
-  <h2>We tested Guardian on 30 payments before showing it to anyone</h2>
-  <p class="lede">Fifteen scams across seven patterns, and fifteen genuine payments chosen to be hard: a son abroad asking for fees, a real police e-challan, a first payment to a plumber, a friend's hospital loan.</p>
+  <h2>We tested Guardian on 38 payments before showing it to anyone</h2>
+  <p class="lede">Scams across seven patterns, and genuine payments chosen to be hard: a son abroad asking for fees, a real police e-challan, a first payment to a plumber, a ₹2.4 lakh hospital bill. Eight cases have no conversation at all, only the signals a payment app collects by itself.</p>
   <div class="figures" id="figures"></div>
 
   <h3>Is the confidence honest?</h3>
@@ -30,18 +30,19 @@
 <script type="module">
 const r = await (await fetch("eval.json")).json();
 const pct = (x) => `${Math.round(x * 100)}%`;
-const caught = Math.round(r.hold.recall * r.rows.filter((x) => x.label === "scam").length);
-const wrong = Math.round(r.hold.falsePositiveRate * r.rows.filter((x) => x.label === "legit").length);
+const nScam = r.rows.filter((x) => x.label === "scam").length, nLegit = r.rows.filter((x) => x.label === "legit").length;
+const caught = Math.round(r.hold.recall * nScam);
+const wrong = Math.round(r.hold.falsePositiveRate * nLegit);
 document.getElementById("figures").innerHTML = [
-  [`${caught} of 15`, "scams held before the money moved"],
-  [`${wrong} of 15`, "genuine payments wrongly held"],
-  [pct(r.scamTypeAccuracy), "scam pattern named correctly"],
+  [`${caught} of ${nScam}`, "scams held before the money moved"],
+  [`${wrong} of ${nLegit}`, "genuine payments wrongly held"],
+  [`${r.untyped.held} of ${r.untyped.scams}`, "scams held with nothing typed, from phone signals alone"],
   [`${r.latencyMs.median} ms`, `typical decision time (slowest 5%: ${r.latencyMs.p95} ms)`],
 ].map(([b, s]) => `<div class="figure"><b>${b}</b><span>${s}</span></div>`).join("");
 document.getElementById("rel").innerHTML = `<tr><th>Guardian said</th><th>Cases</th><th>Actually scams</th></tr>` +
   r.reliability.map((b) => `<tr><td>${b.bin.replace("–", " to ")}</td><td>${b.n}</td><td>${b.actualScamRate == null ? "none in this range" : pct(b.actualScamRate)}</td></tr>`).join("");
 document.getElementById("rows").innerHTML = `<tr><th>Case</th><th>Truth</th><th>Scam chance</th><th>Decision</th><th>Pattern</th><th>Time</th></tr>` +
-  r.rows.map((x) => `<tr><td>${x.id}</td><td>${x.label === "scam" ? "Scam" : "Genuine"}</td><td>${pct(x.probability)}</td><td class="${x.verdict}">${{ hold: "Held", warn: "Check", allow: "Clear" }[x.verdict]}</td><td>${x.scam_type_pred.replaceAll("_", " ")}</td><td>${x.ms} ms</td></tr>`).join("");
+  r.rows.map((x) => `<tr><td>${x.id}</td><td>${x.label === "scam" ? "Scam" : "Genuine"}${x.typed ? "" : ", nothing typed"}</td><td>${pct(x.probability)}</td><td class="${x.verdict}">${{ hold: "Held", warn: "Check", allow: "Clear" }[x.verdict]}</td><td>${x.scam_type_pred.replaceAll("_", " ")}</td><td>${x.ms} ms</td></tr>`).join("");
 </script>
 </body>
 </html>

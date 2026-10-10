@@ -6,11 +6,11 @@ import { QUESTIONS, THRESHOLDS, buildInput } from "../src/guardian.js";
 const cases = fs.readFileSync("data/eval.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l));
 
 async function run(c) {
-  const { answers, ms, source } = await decide(buildInput({ payment: c.payment, context: c.context }), QUESTIONS);
+  const { answers, ms, source } = await decide(buildInput({ payment: c.payment, context: c.context, situation: c.situation ?? null }), QUESTIONS);
   const p = answers.is_scam.probability;
   const risk = answers.risk.score;
   const verdict = p >= THRESHOLDS.hold || risk >= 2.5 ? "hold" : p >= THRESHOLDS.warn || risk >= 1.5 ? "warn" : "allow";
-  return { id: c.id, label: c.label, scam_type: c.scam_type, probability: p, verdict, scam_type_pred: answers.scam_type.choice, ms, source };
+  return { id: c.id, label: c.label, scam_type: c.scam_type, probability: p, verdict, scam_type_pred: answers.scam_type.choice, ms, source, typed: Boolean(c.context) };
 }
 
 const rows = [];
@@ -33,7 +33,9 @@ const report = {
   n: rows.length,
   hold: at(THRESHOLDS.hold),
   warn: at(THRESHOLDS.warn),
-  scamTypeAccuracy: scams.filter((r) => r.scam_type_pred === r.scam_type).length / scams.length,
+  // The pattern is only knowable when there is a conversation; signal-only cases are scored on held vs. not.
+  scamTypeAccuracy: scams.filter((r) => r.typed && r.scam_type_pred === r.scam_type).length / scams.filter((r) => r.typed).length,
+  untyped: { scams: scams.filter((r) => !r.typed).length, held: scams.filter((r) => !r.typed && r.verdict === "hold").length, legit: legits.filter((r) => !r.typed).length, wronglyHeld: legits.filter((r) => !r.typed && r.verdict === "hold").length },
   latencyMs: { median: lat[Math.floor(lat.length / 2)], p95: lat[Math.floor(lat.length * 0.95)] },
   costPerCheckUsd: null,
   reliability: bins,
@@ -45,5 +47,5 @@ fs.writeFileSync("web/eval.json", JSON.stringify(report, null, 2));
 console.table(rows.map(({ id, label, probability, verdict, scam_type_pred, ms }) => ({ id, label, p: probability, verdict, type: scam_type_pred, ms })));
 console.log("HOLD threshold:", report.hold);
 console.log("WARN threshold:", report.warn);
-console.log("Scam-type accuracy:", report.scamTypeAccuracy, "Latency:", report.latencyMs);
+console.log("Scam-type accuracy (typed cases):", report.scamTypeAccuracy, "Latency:", report.latencyMs, "No-typing cases:", report.untyped);
 console.table(bins);

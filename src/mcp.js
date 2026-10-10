@@ -46,19 +46,37 @@ function buildServer() {
       "A HOLD means the payment is paused (not blocked) and waiting for the family member to block or approve it in the Guardian card. " +
       "Describe it as held/paused, never as blocked, unless the family has blocked it.",
     inputSchema: {
-      context: z.string().describe("The messages, call transcript, or description of what happened before the payment"),
+      context: z.string().optional().describe("The messages, call transcript, or description of what happened before the payment (optional: Guardian also works from automatic signals alone)"),
       amount: z.number().optional().describe("Amount in INR"),
       payee_name: z.string().optional(),
       payee_id: z.string().optional().describe("UPI ID, account, or website domain"),
       first_time: z.boolean().optional().describe("True if paying this payee for the first time"),
       language: z.enum(["en", "hi"]).optional().describe("Language for the explanation"),
       actor: z.string().optional().describe("Who is making the payment, e.g. 'AI shopping agent on behalf of Lakshmi'"),
+      // Signals a payment app collects automatically; the payer types nothing.
+      on_call: z.boolean().optional().describe("Payer is on a call right now"),
+      call_type: z.enum(["whatsapp_video", "whatsapp_audio", "phone"]).optional(),
+      caller_in_contacts: z.boolean().optional(),
+      call_minutes: z.number().optional(),
+      screen_share_app: z.string().optional().describe("Name of an open screen-sharing app, e.g. AnyDesk"),
+      usual_max_amount: z.number().optional().describe("Payer's usual largest payment in INR"),
+      payee_in_contacts: z.boolean().optional(),
+      payee_verified_merchant: z.boolean().optional(),
+      payee_account_age_days: z.number().optional(),
+      payee_reports: z.number().optional().describe("Scam reports against this payee in a shared registry"),
     },
     _meta: { ui: { resourceUri: WIDGET_URI }, "openai/outputTemplate": WIDGET_URI },
   }, async (args) => {
+    const situation = {
+      onCall: args.on_call, callType: args.call_type, callerInContacts: args.caller_in_contacts, callMinutes: args.call_minutes,
+      screenShareApp: args.screen_share_app, usualMaxAmount: args.usual_max_amount, payeeInContacts: args.payee_in_contacts,
+      payeeVerifiedMerchant: args.payee_verified_merchant, payeeAccountAgeDays: args.payee_account_age_days, payeeReports: args.payee_reports,
+    };
+    const hasSituation = Object.values(situation).some((v) => v !== undefined);
     const result = await assess({
+      situation: hasSituation ? situation : null,
       payment: { amount: args.amount, payeeName: args.payee_name, payeeId: args.payee_id, firstTime: args.first_time ?? true, actor: args.actor ?? "ChatGPT user" },
-      context: args.context,
+      context: args.context ?? "",
       language: args.language ?? "en",
     });
     const item = store.record(result);

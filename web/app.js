@@ -1,6 +1,12 @@
 const SCENARIOS = [
   {
-    id: "arrest", names: { them: "Caller", me: "Amma" }, label: "Digital arrest call", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
+    id: "live", names: { them: "Caller", me: "Amma" }, label: "Live call, nothing typed",
+    payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
+    situation: { onCall: true, callType: "whatsapp_video", callerInContacts: false, callMinutes: 38, usualMaxAmount: 15000, payeeAccountAgeDays: 3, payeeReports: 7 },
+    chat: [],
+  },
+  {
+    id: "arrest", situation: { onCall: true, callType: "whatsapp_video", callerInContacts: false, callMinutes: 52, usualMaxAmount: 20000, payeeAccountAgeDays: 12, payeeReports: 2 }, names: { them: "Caller", me: "Amma" }, label: "Digital arrest call", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
     chat: [
       ["sys", "WhatsApp video call from +91 98XXX XXX21. A man in police uniform, CBI logo on the wall behind him."],
       ["them", "I am Inspector Vikram Sharma, CBI Mumbai. A FedEx parcel in your Aadhaar name has 5 passports and 200g MDMA."],
@@ -10,7 +16,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "trading", names: { them: "Group admin", me: "Amma" }, label: "Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
+    id: "trading", situation: { onCall: false, usualMaxAmount: 25000, payeeInContacts: false, payeeAccountAgeDays: 20, payeeReports: 3 }, names: { them: "Group admin", me: "Amma" }, label: "Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
     chat: [
       ["them", "Welcome to SEBI-Registered Elite VIP Stock Group 🚀 Our mentor's IPO picks gave 312% last month."],
       ["them", "Your app dashboard shows profit ₹6,84,000. To withdraw, pay 30% 'tax clearance' first."],
@@ -19,7 +25,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "mum", names: { them: "New number", me: "Amma" }, label: "\"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
+    id: "mum", situation: { onCall: false, usualMaxAmount: 10000, payeeInContacts: false, payeeAccountAgeDays: 45, payeeReports: 0 }, names: { them: "New number", me: "Amma" }, label: "\"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
     chat: [
       ["them", "Hi Mum, this is my new number, old phone fell in water 😭"],
       ["them", "Can you pay my hostel fees urgently? Deadline today. Send to my friend Priya's UPI, my bank app isn't working on this phone."],
@@ -28,7 +34,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "legit", names: { them: "Ravi, son", me: "Amma", safe: true }, label: "Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false, note: "BESCOM bill money for Ravi (my son)" },
+    id: "legit", situation: { onCall: false, usualMaxAmount: 8000, payeeInContacts: true, payeeAccountAgeDays: 2100, payeeReports: 0 }, names: { them: "Ravi, son", me: "Amma", safe: true }, label: "Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false, note: "BESCOM bill money for Ravi (my son)" },
     chat: [
       ["them", "Amma, the BESCOM bill came, ₹4,480. Can you send me ₹4,500 on my SBI UPI? I'll pay it from my app tonight like every month."],
       ["me", "Ok kanna, sending to your usual UPI now."],
@@ -36,7 +42,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "agent", names: { them: "Agent", me: "You", safe: false }, label: "AI agent at checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
+    id: "agent", situation: { usualMaxAmount: 100000, payeeAccountAgeDays: 6, payeeReports: 1 }, names: { them: "Agent", me: "You", safe: false }, label: "AI agent at checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
     chat: [
       ["me", "Agent task: buy an iPhone 17 under ₹95,000 from a trusted seller."],
       ["them", "Found 'Amazon Mega Diwali Deal' through an Instagram ad. The link opened amaz0n-deals-checkout.shop."],
@@ -58,12 +64,33 @@ function loadScenario(s) {
   for (const k of ["payeeName", "payeeId", "amount"]) $(k).value = s.payment[k];
   $("firstTime").checked = s.payment.firstTime;
   $("amtLabel").textContent = Number(s.payment.amount).toLocaleString("en-IN");
+  $("noticed").innerHTML = noticed(s);
+  $("chat").hidden = !s.chat.length;
   $("chat").innerHTML = s.chat.map(([who, t]) => who === "sys"
     ? `<div class="sys">${t}</div>`
     : `<div class="msg ${who}${who === "them" && !s.names.safe ? " threat" : ""}" data-who="${s.names[who]}">${t}</div>`).join("");
   document.querySelectorAll("#scenarios button").forEach((b) => b.classList.toggle("on", b.dataset.id === s.id));
   $("result").className = "result empty";
   $("result").innerHTML = "Press Pay on the phone. Guardian reads everything on the left and decides before any money moves.";
+}
+
+// Signals the payment app collects by itself, shown the way a person would say them.
+function noticed(s) {
+  const x = s.situation;
+  if (!x) return "";
+  const rows = [];
+  if (x.onCall) rows.push(["Call", `${x.callType === "whatsapp_video" ? "WhatsApp video call" : "Phone call"} with an ${x.callerInContacts ? "saved contact" : "unknown number"}, ${x.callMinutes} min so far`, !x.callerInContacts]);
+  else if (x.onCall === false) rows.push(["Call", "Not on a call", false]);
+  if (x.screenShareApp) rows.push(["Screen", `${x.screenShareApp} is open`, true]);
+  if (x.usualMaxAmount) {
+    const k = s.payment.amount / x.usualMaxAmount;
+    rows.push(["Amount", k >= 2 ? `${Math.round(k)}x her usual largest payment` : "Within her normal range", k >= 2]);
+  }
+  rows.push(["Payee", s.payment.firstTime ? "First payment to this person" : "Paid before", s.payment.firstTime]);
+  if (x.payeeAccountAgeDays != null) rows.push(["Account age", x.payeeAccountAgeDays < 30 ? `Opened ${x.payeeAccountAgeDays} days ago` : `${Math.round(x.payeeAccountAgeDays / 365)}+ years old`, x.payeeAccountAgeDays < 30]);
+  if (x.payeeReports != null) rows.push(["Reports", x.payeeReports ? `${x.payeeReports} scam reports on this UPI ID` : "No scam reports", x.payeeReports > 0]);
+  const typed = s.chat.length ? "" : `<p class="none-typed">Amma didn't type or upload anything.</p>`;
+  return `<h3>What the phone noticed, automatically</h3><dl class="signals">${rows.map(([k, v, bad]) => `<dt>${k}</dt><dd class="${bad ? "bad" : ""}">${v}</dd>`).join("")}</dl>${typed}`;
 }
 
 $("scenarios").innerHTML = SCENARIOS.map((s) => `<li><button data-id="${s.id}"><span>${s.label}</span><span class="amt">₹${Number(s.payment.amount).toLocaleString("en-IN")}</span></button></li>`).join("");
@@ -125,7 +152,7 @@ async function pay() {
   try {
     const res = await fetch("/api/check", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment, context, images, language }),
+      body: JSON.stringify({ payment, context, images, language, situation: current.situation ?? null }),
     });
     const item = await res.json();
     if (!res.ok) throw new Error(item.error ?? `HTTP ${res.status}`);
@@ -169,7 +196,7 @@ function renderResult(item) {
     <h3>Which scam it looks like</h3>
     ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
     ${item.explanation ? `<div class="explain">${item.explanation}</div>` : ""}
-    <p class="meta">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API (gpt-6-luna)" : "the fallback model"}: one call, six questions, the chat${shots}.</p>
+    <p class="meta">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API (gpt-6-luna)" : "the fallback model"}: one call, six questions, ${current.chat.length ? "the chat and " : ""}the phone's signals${shots}.</p>
     <p class="policy">Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.</p>`;
 }
 
@@ -185,7 +212,7 @@ const PHONE = {
     checking: "Guardian is checking…",
     paid: (p) => `Paid ₹${inr(p.amount)}`, to: (p) => `to ${p.payeeName}`,
     warnTitle: "Wait, this looks unusual", cancel: "Cancel payment",
-    held: "Payment paused", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
+    held: "Payment paused", onCall: "You're on a call with an unknown number. Real police never ask for money on a call. You can hang up.", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
     blocked: "Rahul blocked this payment. Your money is safe.", report: "To report it, call 1930 or visit cybercrime.gov.in",
     approved: "Rahul approved it. Payment sent.", reset: "Start over",
   },
@@ -193,7 +220,7 @@ const PHONE = {
     checking: "Guardian जाँच कर रहा है…",
     paid: (p) => `₹${inr(p.amount)} का भुगतान हो गया`, to: (p) => `${p.payeeName} को`,
     warnTitle: "रुकिए, यह असामान्य लग रहा है", cancel: "भुगतान रद्द करें",
-    held: "भुगतान रोका गया", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
+    held: "भुगतान रोका गया", onCall: "आप एक अनजान नंबर से कॉल पर हैं। असली पुलिस कभी कॉल पर पैसे नहीं माँगती। आप कॉल काट सकते हैं।", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
     blocked: "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
     approved: "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", reset: "फिर से शुरू करें",
   },
@@ -208,7 +235,7 @@ function showPhone(state, item) {
   if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>${t.checking}</p></div>`;
   if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">${ICON.ok}</div><h3>${t.paid(item.payment)}</h3><p>${t.to(item.payment)}</p></div>`;
   if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">${ICON.warn}</div><h3>${t.warnTitle}</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
-  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">${ICON.hold}</div><h3>${t.held}</h3><p>${item.explanation ?? ""}</p>
+  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">${ICON.hold}</div><h3>${t.held}</h3>${item.situation?.onCall && !item.situation?.callerInContacts ? `<p class="oncall">${t.onCall}</p>` : ""}<p>${item.explanation ?? ""}</p>
       <div class="waiting" id="waiting">${t.waiting}</div></div>`;
   s.insertAdjacentHTML("afterbegin", bar);
   s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">${t.reset}</button>`);

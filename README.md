@@ -10,7 +10,7 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 
 Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (MCP + plugin extensions)** · **Agents API**
 
-`~185 ms per decision` · `15 of 15 scams held` · `0 of 15 genuine payments wrongly held` · `English + हिन्दी`
+`~185 ms per decision` · `19 of 19 scams held` · `0 of 19 genuine payments wrongly held` · `works with nothing typed` · `English + हिन्दी`
 
 </div>
 
@@ -21,6 +21,7 @@ Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (M
 - [The problem](#-the-problem)
 - [What Guardian does](#-what-guardian-does)
 - [How it works](#-how-it-works)
+- [Where the signals come from](#-where-the-signals-come-from)
 - [Does it work?](#-does-it-work)
 - [How we found this problem](#-how-we-found-this-problem)
 - [Quick start](#-quick-start)
@@ -74,7 +75,7 @@ flowchart LR
     H --> I["Phone updates live:<br/>'Rahul blocked this payment'"]
 ```
 
-1. **Before a payment is sent**, the payment app (or the user, from ChatGPT) sends Guardian the payment details plus what happened before it: messages, call notes, screenshots.
+1. **Before a payment is sent**, the payment app sends Guardian the payment details plus signals it already has: is she on a call with an unknown number, for how long, how unusual is the amount, how old is the payee's account, has it been reported. **The payer types nothing.** If a conversation or screenshot is available (or a family member describes it in ChatGPT), Guardian reads that too.
 2. **One Decisions API call** asks six bounded questions and gets back **calibrated probabilities** in about 200 ms.
 3. **A three-tier policy** acts on that confidence: it only takes action on its own when it is sure, and the uncertain middle goes to a human.
 4. **When it warns or holds**, GPT-6.1 Sol explains *why* in plain English or Hindi and tells the person what to do (for example, call the **1930** cybercrime helpline).
@@ -84,6 +85,7 @@ flowchart LR
 
 | Scenario | Guardian's verdict |
 |---|---|
+| 📵 **Live call, nothing typed**: ₹4,50,000 to a 3-day-old UPI ID with 7 scam reports, during a 38-minute WhatsApp video call with an unknown number | ⛔ **Hold**, 100%, from phone signals alone |
 | 🚔 "CBI" digital arrest on a video call, ₹4,50,000 | ⛔ **Hold**, 100%, *digital arrest* |
 | 📈 Fake "SEBI-registered" trading group asking for a "tax" to withdraw profits | ⛔ **Hold**, 100%, *investment/trading* |
 | 📱 "Hi Mum, new number, pay my fees to my friend's UPI" | ⛔ **Hold**, 98%, *family impersonation* |
@@ -144,11 +146,30 @@ Guardian is also a **ChatGPT plugin**: an MCP server ([`src/mcp.js`](src/mcp.js)
 
 ---
 
+## 📡 Where the signals come from
+
+Someone in the middle of a "digital arrest" call is scared, watched on video, and told not to touch anything. **She will not upload screenshots or type out what happened.** So Guardian is designed to work with zero input from her:
+
+| Signal | Who knows it in production | In this demo |
+|---|---|---|
+| On a call right now? WhatsApp video or phone? Caller in contacts? How long? | The phone OS / the payment app, with permission given once in advance | Simulated |
+| Screen-sharing app (AnyDesk etc.) open? | The payment app (some Indian banking apps already check this) | Simulated |
+| Amount vs. her usual largest payment | The bank / UPI app's own history | Simulated |
+| First payment to this payee? Payee in contacts? Verified merchant? | The UPI app | Simulated |
+| Payee account age, scam reports against this UPI ID | The bank / NPCI / a shared fraud registry | Simulated |
+| Conversation, screenshots | Optional: only if the payer or a family member shares them | Pre-loaded in some scenarios |
+
+Every signal is written out in plain words (*"on a WhatsApp video call with an unknown number for 38 minutes; this payment is 30x her usual largest payment"*) and sent to the same single Decisions API call.
+In the demo these values are simulated; in production the bank or UPI app supplies them. Guardian never needs the content of the call.
+
+---
+
 ## 📊 Does it work?
 
-We built a labelled test set of **30 cases** ([`data/eval.jsonl`](data/eval.jsonl)):
-- **15 scams** across 7 patterns, in English and Hinglish.
-- **15 genuine payments that were deliberately hard**: a son abroad urgently asking for semester fees, a real police e-challan paid on the official site, a first-time payment to a plumber, a friend's hospital loan, an AI agent re-ordering from amazon.in.
+We built a labelled test set of **38 cases** ([`data/eval.jsonl`](data/eval.jsonl)):
+- **19 scams** across 7 patterns, in English and Hinglish.
+- **19 genuine payments that were deliberately hard**: a son abroad urgently asking for semester fees, a real police e-challan paid on the official site, a first-time payment to a plumber, a friend's hospital loan, an AI agent re-ordering from amazon.in, a ₹2.4 lakh first-time hospital payment.
+- **8 of the 38 have no conversation at all**: only the signals a payment app collects by itself.
 
 ```bash
 npm run eval
@@ -156,10 +177,11 @@ npm run eval
 
 | Metric | Result |
 |---|---|
-| Scams held (≥ 80%) | **15 / 15** |
-| Genuine payments wrongly held | **0 / 15** (genuine cases scored 2–13%) |
-| Scam pattern identified correctly | **15 / 15** |
-| Decision latency | **185 ms median**, 371 ms p95 |
+| Scams held (≥ 80%) | **19 / 19** |
+| Genuine payments wrongly held | **0 / 19** (genuine cases scored 2–13%) |
+| Scams held with **nothing typed** (phone signals only) | **4 / 4**, with 0 of 4 genuine no-chat payments held |
+| Scam pattern identified (cases with a conversation) | **13 / 15** (the two misses are borderline: a dating-app crypto scam called *romance*, a boss impersonation called *unclear*) |
+| Decision latency | **~185 ms median**, under 400 ms p95 |
 | Decisions API vs. our own Structured-Outputs fallback (same model, same questions) | **~0.26 s vs ~2.6 s**: 10x faster, and with probabilities |
 
 The live report is at `http://localhost:8787/eval.html`, including a reliability table that compares predicted probability with the actual scam rate.

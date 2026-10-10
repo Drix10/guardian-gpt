@@ -106,13 +106,61 @@ function buildServer() {
     title: "Approve or block a held payment",
     description: "Approve or block a payment that Guardian held for family review.",
     inputSchema: { id: z.string(), decision: z.enum(["approve", "block"]) },
-    _meta: { ui: { resourceUri: WIDGET_URI, visibility: ["model", "app"] }, "openai/outputTemplate": WIDGET_URI },
+    _meta: { ui: { resourceUri: WIDGET_URI, visibility: ["app"] }, "openai/outputTemplate": WIDGET_URI },
   }, async ({ id, decision }) => {
     const item = store.resolve(id, decision, "family (ChatGPT)");
     return {
       structuredContent: { kind: "resolved", item, items: dashboard().items },
       content: [{ type: "text", text: item ? `Payment ${id} ${item.status}.` : `No payment ${id}.` }],
     };
+  });
+
+  // For a family member's agent (e.g. Rahul's Dot): blocking only makes money safer, so it may act alone.
+  server.registerTool("guardian_block_payment", {
+    title: "Block a held payment",
+    description: "Block a payment that Guardian is holding. This only makes the family member's money safer, so it may be done without asking.",
+    inputSchema: { id: z.string().describe("Held payment id") },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async ({ id }) => {
+    const item = store.get(id);
+    if (!item) return { content: [{ type: "text", text: `No payment ${id}.` }], isError: true };
+    if (item.status !== "awaiting_family") return { content: [{ type: "text", text: `Payment ${id} is already ${item.status}.` }] };
+    store.resolve(id, "block", "family agent");
+    return { content: [{ type: "text", text: `Blocked payment ${id}: ₹${Number(item.payment.amount ?? 0).toLocaleString("en-IN")} to ${item.payment.payeeName}. No money moved.` }] };
+  });
+
+  // Releasing money always goes back to a human.
+  server.registerTool("guardian_approve_payment", {
+    title: "Approve a held payment (ask the person first)",
+    description: "Release a payment Guardian is holding. ALWAYS ask the family member and get an explicit yes before calling this; never approve on your own.",
+    inputSchema: { id: z.string(), confirmed_by_person: z.literal(true).describe("Must be true: the family member explicitly said yes") },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, async ({ id }) => {
+    const item = store.get(id);
+    if (!item || item.status !== "awaiting_family") return { content: [{ type: "text", text: `Payment ${id} is not waiting for approval.` }], isError: true };
+    store.resolve(id, "approve", "family (confirmed)");
+    return { content: [{ type: "text", text: `Approved payment ${id}. The money will now be sent.` }] };
+  });
+
+  // What Guardian knows about a payee, for a family agent's background research.
+  server.registerTool("guardian_payee_report", {
+    title: "What Guardian knows about a payee",
+    description: "Read-only: scam reports, account age and recent Guardian decisions for a payee UPI ID or domain.",
+    inputSchema: { payee_id: z.string() },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, async ({ payee_id }) => {
+    const seen = store.list().filter((p) => p.payment?.payeeId === payee_id);
+    const report = {
+      payeeId: payee_id,
+      checks: seen.length,
+      held: seen.filter((p) => p.verdict === "hold").length,
+      blocked: seen.filter((p) => p.status === "blocked").length,
+      scamReports: Math.max(0, ...seen.map((p) => p.situation?.payeeReports ?? 0)),
+      accountAgeDays: seen.find((p) => p.situation?.payeeAccountAgeDays != null)?.situation.payeeAccountAgeDays ?? null,
+      patterns: [...new Set(seen.map((p) => p.scamType))],
+      lastSeen: seen[0]?.createdAt ?? null,
+    };
+    return { structuredContent: report, content: [{ type: "text", text: JSON.stringify(report) }] };
   });
 
   return server;

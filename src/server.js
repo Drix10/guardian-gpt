@@ -4,6 +4,7 @@ import express from "express";
 import { assess } from "./guardian.js";
 import * as store from "./store.js";
 import { mountMcp } from "./mcp.js";
+import "./notify.js";
 
 const app = express();
 app.use(express.json({ limit: "15mb" }));

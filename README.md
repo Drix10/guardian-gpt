@@ -27,6 +27,7 @@ Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (M
 - [Quick start](#-quick-start)
 - [Use it inside ChatGPT](#-use-it-inside-chatgpt)
 - [Protect AI agents too](#-protect-ai-agents-too)
+- [Rahul's Dot: the family responder](#-rahuls-dot-the-family-responder)
 - [API reference](#-api-reference)
 - [Project structure](#-project-structure)
 - [Cost and model budget](#-cost-and-model-budget)
@@ -142,7 +143,8 @@ Guardian is also a **ChatGPT plugin**: an MCP server ([`src/mcp.js`](src/mcp.js)
 |---|---|---|
 | `guardian_check` | Chat (`@Guardian`) | Checks a described payment and renders a verdict card with probability bars and **Block / Approve** buttons |
 | `guardian_family_dashboard` | **ChatGPT sidebar** (`global` entrypoint) and conversation side panel (`thread`) | The family view: every checked payment, with held ones waiting for a decision |
-| `guardian_resolve_payment` | Called from the widget | Approves or blocks a held payment; the phone updates live through server-sent events |
+| `guardian_resolve_payment` | Called from the widget only | Approves or blocks a held payment from the card's buttons; the phone updates live |
+| `guardian_block_payment` · `guardian_approve_payment` · `guardian_payee_report` | For a family member's agent | See [Rahul's Dot](#-rahuls-dot-the-family-responder) |
 
 ---
 
@@ -303,6 +305,38 @@ The held payment appears instantly on the family dashboard, marked *Started by: 
 
 ---
 
+## 🫂 Rahul's Dot: the family responder
+
+Amma won't have a Dot, and she can't talk to one while a fake officer watches her on video. **Guardian handles the moment of payment. Rahul's Dot handles everything after the hold**, even when Rahul is in a meeting or asleep.
+
+Guardian's MCP server gives a family member's agent exactly the tools it needs, with the safe direction and the risky direction separated:
+
+| Tool | What it does | Who may trigger it |
+|---|---|---|
+| `guardian_payee_report` | Read-only: scam reports, account age and past decisions for the payee | The Dot, freely (background research) |
+| `guardian_block_payment` | Blocks a held payment. Only ever makes money *safer* | The Dot, on its own |
+| `guardian_approve_payment` | Releases the money. Requires `confirmed_by_person: true` | Only after Rahul explicitly says yes |
+
+**Recommended Custom Rules for Rahul's Dot** (Settings → Personalization → Permissions → Custom rules):
+- *Block held Guardian payments* → **Take action without asking**
+- *Approve held Guardian payments* → **Hand off to you**
+- *When a Guardian payment is held* → research the payee with `guardian_payee_report`, message me on my phone (ChatGPT, Slack, Teams or a call), and if I block it, draft the 1930 / cybercrime.gov.in complaint for me to send.
+
+This matches how Dots already treat money: moving money always goes back to a human, so the AI can only make money *safer* on its own.
+
+**Waking the Dot.** Dots can be woken by MCP Events, but those need MCP protocol `2026-07-28`, which the MCP SDK in this repo doesn't support yet. Rather than hand-roll the protocol, Guardian posts a plain webhook when a payment is held:
+
+```bash
+FAMILY_WEBHOOK_URL=https://your-automation.example/hook npm start
+```
+```json
+{ "type": "payment_held", "timestamp": "…", "data": { "id": "40abeb2d", "amount": 450000, "payeeName": "RBI Verification Cell",
+  "payeeId": "rbi.verify2291@okaxis", "probability": 1, "scamType": "unclear_pattern", "explanation": "…" } }
+```
+Point it at an MCP Events bridge or any automation that can reach the family. **The live demo doesn't depend on Dots**: the family dashboard and the ChatGPT card are the main path.
+
+---
+
 ## 📡 API reference
 
 ### `POST /api/check`
@@ -363,6 +397,7 @@ guardian-gpt/
 │   ├── decide.js       # Decisions API wrapper + Structured Outputs fallback
 │   ├── guardian.js     # Question set, thresholds, verdict policy, Sol explanations
 │   ├── store.js        # In-memory payments + live event stream
+│   ├── notify.js       # payment_held webhook for the family (FAMILY_WEBHOOK_URL)
 │   ├── mcp.js          # ChatGPT plugin: MCP tools + widget resource
 │   └── server.js       # Express: REST API, SSE, static demo, /mcp
 ├── ui/                 # ChatGPT widget source (MCP Apps + OpenAI extensions)
@@ -397,7 +432,8 @@ guardian-gpt/
 
 **Next**
 
-- [ ] **MCP Events**: a held payment instantly wakes the family member's ChatGPT or Dot
+- [x] Family-agent tools (block alone, approve only with a human yes, payee report) and a `payment_held` webhook
+- [ ] **MCP Events** (protocol 2026-07-28): a held payment wakes Rahul's Dot directly, once the MCP SDK supports it
 - [ ] Screenshot capture straight from the payment app's share sheet
 - [ ] Re-calibration on a large set of real reported scams, with per-pattern thresholds
 - [x] **Agent mode**: Guardian in front of AI agents (Agents API) before they pay. See [Protect AI agents too](#-protect-ai-agents-too)

@@ -25,7 +25,7 @@ function byName(answers) {
   return Object.fromEntries(answers.map((a) => [a.name, a]));
 }
 
-async function fallback(input, questions) {
+export async function fallback(input, questions) {
   const properties = {};
   for (const q of questions) {
     if (q.type === "predicate") properties[q.name] = { type: "number", description: `Probability 0-1: ${q.instructions}` };

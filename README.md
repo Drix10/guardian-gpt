@@ -19,6 +19,15 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 > **Try it in your own ChatGPT:** Plugins → **+** → *Add custom MCP server* → `https://tube-reprint-encourage-buffalo.trycloudflare.com/mcp` (no auth), then `@Guardian` in a chat.
 > The live link runs from the presenter's laptop; if it's down, follow [Quick start](#-quick-start) to run it locally in two minutes.
 
+## 🎬 Demo video (67 s)
+
+<video src="https://github.com/Drix10/guardian-gpt/raw/main/media/guardian-demo.mp4" poster="media/guardian-demo-poster.jpg" controls muted playsinline width="100%"></video>
+
+[![Guardian demo video: a held ₹4,50,000 payment on the family dashboard](media/guardian-demo-poster.jpg)](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4)
+
+If the player above doesn't load, click the image or [watch the video here](https://github.com/Drix10/guardian-gpt/blob/main/media/guardian-demo.mp4) ([download MP4](media/guardian-demo.mp4)).
+
+
 ---
 
 ## 🧩 What we built with OpenAI's newest platform
@@ -66,6 +75,7 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 
 ## Contents
 
+- [Demo video](#-demo-video-67-s)
 - [What we built with OpenAI's newest platform](#-what-we-built-with-openais-newest-platform)
 - [Pitch deck](#️-pitch-deck)
 - [The problem](#-the-problem)
@@ -463,6 +473,7 @@ guardian-gpt/
 │   └── agent-demo.js   # Agents API shopping agent guarded by Guardian
 ├── research/           # The research that led to this project
 ├── slides/             # The pitch deck: 11 slides as PNG + one PDF
+├── media/              # Demo video (MP4) and its thumbnail
 └── AGENTS.md           # Architecture + conventions for coding agents
 ```
 

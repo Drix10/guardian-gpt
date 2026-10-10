@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian · Family</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="brand">🛡️ Guardian <span>Family dashboard · Rahul</span></div></header>
+<div class="wrap"><div id="list"></div></div>
+<script type="module">
+const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;
+const STATUS = { awaiting_family: "⏳ Waiting for you", approved: "✅ Approved", blocked: "🛑 Blocked", warned: "⚠️ Warned", allowed: "✅ Allowed" };
+let items = [];
+function render() {
+  document.getElementById("list").innerHTML = items.length ? items.map((i) => `
+    <div class="card ${i.verdict}">
+      <b>₹${(i.payment?.amount ?? 0).toLocaleString("en-IN")} → ${i.payment?.payeeName} <small style="color:var(--muted)">${i.payment?.payeeId}</small></b>
+      <div class="big" style="font-size:30px">${pct(i.probability)}<small> scam · ${i.scamType.replaceAll("_", " ")}</small></div>
+      ${i.explanation ? `<div class="explain">${i.explanation}</div>` : ""}
+      ${i.status === "awaiting_family"
+        ? `<div class="actions"><button class="b-block" data-id="${i.id}" data-d="block">Block payment</button><button class="b-approve" data-id="${i.id}" data-d="approve">Approve</button></div>`
+        : `<div class="status">${STATUS[i.status]}</div>`}
+    </div>`).join("") : `<p style="color:var(--muted)">No payments yet.</p>`;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-id]");
+  if (!b) return;
+  await fetch(`/api/payments/${b.dataset.id}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision: b.dataset.d }) });
+});
+items = await (await fetch("/api/payments")).json();
+render();
+new EventSource("/api/events").onmessage = (e) => {
+  const item = JSON.parse(e.data);
+  items = [item, ...items.filter((i) => i.id !== item.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  render();
+};
+</script>
+</body>
+</html>

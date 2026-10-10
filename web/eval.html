@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian · Accuracy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="brand">🛡️ Guardian <span>How well does it work?</span></div></header>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <h3>Is the confidence honest? (predicted scam probability vs. actual)</h3>
+    <table id="rel"></table>
+  </div>
+  <div class="card">
+    <h3>Every case</h3>
+    <table id="rows"></table>
+  </div>
+  <p style="color:var(--muted);font-size:13px">30 hand-labelled cases: 15 scams across 7 patterns (digital arrest, trading/task, KYC phishing, UPI collect-request, family impersonation, lottery/job, AI-agent fake checkout) and 15 deliberately hard genuine payments. Small test set — a sanity check, not a production benchmark.</p>
+</div>
+<script type="module">
+const r = await (await fetch("eval.json")).json();
+const pct = (x) => `${Math.round(x * 100)}%`;
+document.getElementById("kpis").innerHTML = [
+  [pct(r.hold.recall), "scams caught (hold ≥ 80%)"],
+  [pct(r.hold.falsePositiveRate), "genuine payments wrongly held"],
+  [pct(r.scamTypeAccuracy), "scam pattern identified"],
+  [`${r.latencyMs.median} ms`, `median decision (p95 ${r.latencyMs.p95} ms)`],
+].map(([b, s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
+document.getElementById("rel").innerHTML = `<tr><th>Predicted</th><th>Cases</th><th>Actually scams</th></tr>` +
+  r.reliability.map((b) => `<tr><td>${b.bin}</td><td>${b.n}</td><td>${b.actualScamRate == null ? "—" : pct(b.actualScamRate)}</td></tr>`).join("");
+document.getElementById("rows").innerHTML = `<tr><th>Case</th><th>Truth</th><th>Scam prob.</th><th>Verdict</th><th>Pattern</th><th>ms</th></tr>` +
+  r.rows.map((x) => `<tr><td>${x.id}</td><td>${x.label}</td><td>${pct(x.probability)}</td><td>${x.verdict}</td><td>${x.scam_type_pred.replaceAll("_", " ")}</td><td>${x.ms}</td></tr>`).join("");
+</script>
+</body>
+</html>

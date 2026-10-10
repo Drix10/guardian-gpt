@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardian · Pay demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">🛡️ Guardian <span>the decision layer for payments</span></div>
+  <nav><a href="/" class="on">Pay app</a><a href="/family.html" target="_blank">Family dashboard</a><a href="/eval.html" target="_blank">Accuracy</a></nav>
+</header>
+
+<main class="stage">
+  <!-- Left: what happened before the payment -->
+  <section class="panel">
+    <h2>1 · What happened before the payment</h2>
+    <div class="scenarios" id="scenarios"></div>
+    <div class="chat" id="chat"></div>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/*" multiple hidden>
+      <span>📎 Add screenshots (video call, chat, payment page)</span>
+    </label>
+    <div class="thumbs" id="thumbs"></div>
+  </section>
+
+  <!-- Middle: phone payment app -->
+  <section class="phone">
+    <div class="screen" id="screen">
+      <div class="pay">
+        <div class="pay-h">PayNow · UPI</div>
+        <label>Paying to<input id="payeeName"></label>
+        <label>UPI ID / site<input id="payeeId"></label>
+        <label>Amount (₹)<input id="amount" type="number"></label>
+        <label class="row"><input id="firstTime" type="checkbox" checked> First time paying this person</label>
+        <label>Language
+          <select id="language"><option value="en">English</option><option value="hi">हिन्दी</option></select>
+        </label>
+        <button id="payBtn" class="btn-pay">Pay ₹<span id="amtLabel">0</span></button>
+        <p class="hint">Guardian checks the whole situation before money moves.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right: what Guardian saw -->
+  <section class="panel">
+    <h2>2 · Guardian's decision</h2>
+    <div id="result" class="result empty">Press <b>Pay</b> to see Guardian decide.</div>
+  </section>
+</main>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>

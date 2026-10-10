@@ -1,0 +1,24 @@
+.g-root { padding: 12px; font-family: inherit; }
+.g-h { margin: 0 0 4px; font-size: 18px; }
+.g-muted { opacity: .65; font-size: 12px; }
+.g-card { margin: 10px 0; padding: 14px; border-radius: 14px; border-left: 4px solid #22a06b; }
+.g-card.bad { border-left-color: #e5484d; }
+.g-card.warn { border-left-color: #f5a524; }
+.g-card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.g-pill { font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #22a06b22; color: #22a06b; }
+.g-pill.bad { background: #e5484d22; color: #e5484d; }
+.g-pill.warn { background: #f5a52422; color: #b07400; }
+.g-amt { font-size: 13px; font-weight: 600; }
+.g-big { font-size: 28px; font-weight: 800; margin: 4px 0 10px; }
+.g-big small { font-size: 12px; font-weight: 500; opacity: .7; }
+.g-bar { display: grid; grid-template-columns: 1fr 120px 40px; align-items: center; gap: 8px; font-size: 12px; margin: 4px 0; }
+.g-track { height: 8px; border-radius: 99px; background: #8882; overflow: hidden; }
+.g-fill { height: 100%; background: #22a06b; }
+.g-fill.warn { background: #f5a524; }
+.g-fill.bad { background: #e5484d; }
+.g-explain { margin: 10px 0 6px; font-size: 14px; line-height: 1.45; }
+.g-actions { display: flex; gap: 8px; margin-top: 10px; }
+.g-status { margin-top: 8px; font-size: 12px; font-weight: 700; }
+.g-status.blocked { color: #e5484d; }
+.g-status.approved, .g-status.allowed { color: #22a06b; }
+.g-refresh { margin-top: 6px; }

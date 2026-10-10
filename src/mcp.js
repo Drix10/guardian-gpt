@@ -51,11 +51,12 @@ function buildServer() {
       payee_id: z.string().optional().describe("UPI ID, account, or website domain"),
       first_time: z.boolean().optional().describe("True if paying this payee for the first time"),
       language: z.enum(["en", "hi"]).optional().describe("Language for the explanation"),
+      actor: z.string().optional().describe("Who is making the payment, e.g. 'AI shopping agent on behalf of Lakshmi'"),
     },
     _meta: { ui: { resourceUri: WIDGET_URI } },
   }, async (args) => {
     const result = await assess({
-      payment: { amount: args.amount, payeeName: args.payee_name, payeeId: args.payee_id, firstTime: args.first_time ?? true, actor: "ChatGPT user" },
+      payment: { amount: args.amount, payeeName: args.payee_name, payeeId: args.payee_id, firstTime: args.first_time ?? true, actor: args.actor ?? "ChatGPT user" },
       context: args.context,
       language: args.language ?? "en",
     });

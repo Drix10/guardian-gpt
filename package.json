@@ -8,7 +8,8 @@
     "build": "esbuild ui/widget.js --bundle --format=esm --minify --outfile=dist/widget.js",
     "start": "node src/server.js",
     "eval": "node scripts/eval.js",
-    "dev": "npm run build && npm start"
+    "dev": "npm run build && npm start",
+    "agent-demo": "node scripts/agent-demo.js"
   },
   "keywords": [],
   "author": "",

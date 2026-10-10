@@ -8,7 +8,7 @@
 It reads the *whole situation* (the chat, the call, the screenshots, who is being paid) and makes one calibrated decision:
 **allow**, **warn**, or **hold for family approval**.
 
-Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (MCP + plugin extensions)**
+Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (MCP + plugin extensions)** · **Agents API**
 
 `~185 ms per decision` · `15 of 15 scams held` · `0 of 15 genuine payments wrongly held` · `English + हिन्दी`
 
@@ -25,6 +25,7 @@ Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (M
 - [How we found this problem](#-how-we-found-this-problem)
 - [Quick start](#-quick-start)
 - [Use it inside ChatGPT](#-use-it-inside-chatgpt)
+- [Protect AI agents too](#-protect-ai-agents-too)
 - [API reference](#-api-reference)
 - [Project structure](#-project-structure)
 - [Cost and model budget](#-cost-and-model-budget)
@@ -229,6 +230,7 @@ the phone shows *"Rahul blocked this payment. Your money is safe."* Then try **�
 | `npm start` | Start the API, web demo, and MCP server on `:8787` |
 | `npm run dev` | Build, then start |
 | `npm run eval` | Run the 30-case evaluation and write `web/eval.json` |
+| `npm run agent-demo -- <mcp-url>` | Run the Agents API shopping agent that must ask Guardian before paying |
 
 ---
 
@@ -249,6 +251,33 @@ the phone shows *"Rahul blocked this payment. Your money is safe."* Then try **�
 5. A verdict card appears with probability bars and **Block / Approve**. Open **Guardian** in the ChatGPT sidebar for the family dashboard.
 
 > If you restart `cloudflared`, the URL changes. Update the server URL in your ChatGPT plugin settings.
+
+---
+
+## 🤖 Protect AI agents too
+
+AI agents now browse and pay on our behalf, and lookalike shops work on them too. Guardian sits in front of them the same way it sits in front of people.
+
+`scripts/agent-demo.js` starts an **OpenAI-hosted shopping agent** (Agents API, `gpt-6-astra`) whose only payment rule is:
+*call Guardian first, and never pay on HOLD or WARN.* The agent reaches Guardian through the **same MCP server ChatGPT uses**.
+
+```bash
+npm run agent-demo -- https://<random>.trycloudflare.com/mcp
+```
+
+```
+🤖 Shopping agent (gpt-6-astra, OpenAI Agents API) starting…
+→ Agent asks Guardian before paying…
+← Guardian: HOLD · 99% scam · agent checkout fraud
+
+🤖 Agent's final message (31.4 s):
+Lakshmi, I have not paid. Guardian placed this purchase on HOLD: the six-day-old website impersonates Amazon,
+pressures you with a countdown, and demands UPI payment to an unverified address. Your son Rahul has been asked to review it.
+```
+
+The held payment appears instantly on the family dashboard, marked *Started by: AI shopping agent on behalf of Lakshmi*.
+
+> Astra is used here only because the Agents API requires it. Every decision is still made by the Decisions API on `gpt-6-luna`.
 
 ---
 
@@ -318,7 +347,9 @@ guardian-gpt/
 ├── dist/widget.js      # Bundled widget (npm run build)
 ├── web/                # Demo payment app, family dashboard, accuracy page
 ├── data/eval.jsonl     # 30 labelled evaluation cases
-├── scripts/eval.js     # Evaluation + reliability report
+├── scripts/
+│   ├── eval.js         # Evaluation + reliability report
+│   └── agent-demo.js   # Agents API shopping agent guarded by Guardian
 ├── research/           # The research that led to this project
 └── AGENTS.md           # Architecture + conventions for coding agents
 ```
@@ -329,7 +360,7 @@ guardian-gpt/
 
 - **Decisions API:** $0.10 per 1M input tokens, **$0 for output**. A typical text-only check is ~300–750 input tokens, so it costs **well under $0.0001**: cheap enough to run on every payment.
 - **GPT-6.1 Sol:** called **only** for warn/hold verdicts, to write the explanation.
-- **No large reasoning model sits in the decision path.** Big models are reserved for jobs that need them.
+- **No large reasoning model sits in the decision path.** Big models are reserved for jobs that need them: `gpt-6-astra` only runs in the optional agent demo, because the Agents API requires it.
 
 ---
 
@@ -347,7 +378,8 @@ guardian-gpt/
 - [ ] **MCP Events**: a held payment instantly wakes the family member's ChatGPT or Dot
 - [ ] Screenshot capture straight from the payment app's share sheet
 - [ ] Re-calibration on a large set of real reported scams, with per-pattern thresholds
-- [ ] **Agent mode**: run Guardian in front of AI agents (Agents API / Dots) before they pay
+- [x] **Agent mode**: Guardian in front of AI agents (Agents API) before they pay. See [Protect AI agents too](#-protect-ai-agents-too)
+- [ ] Guardian as a required step for **Dots** before they spend money
 - [ ] A PSP/bank-facing API with audit logs and per-customer trusted contacts
 - [ ] More Indian languages
 

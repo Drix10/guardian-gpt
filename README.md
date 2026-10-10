@@ -36,9 +36,38 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 
 ---
 
+## 📽️ Pitch deck
+
+<table>
+<tr>
+<td width="50%"><a href="slides/06-live-call.png"><img src="slides/06-live-call.png" alt="A live digital-arrest call, nothing typed: held at 100%"></a></td>
+<td width="50%"><a href="slides/05-how.png"><img src="slides/05-how.png" alt="One decision, in about 200 milliseconds"></a></td>
+</tr>
+<tr>
+<td width="50%"><a href="slides/07-stack.png"><img src="slides/07-stack.png" alt="Five DevDay launches, one product"></a></td>
+<td width="50%"><a href="slides/08-results.png"><img src="slides/08-results.png" alt="Tested on 38 payments: 19/19 held, 0/19 wrongly held"></a></td>
+</tr>
+</table>
+
+**All 11 slides** are in [`slides/`](slides/) ([view them in order](slides/README.md), or download the [PDF](slides/guardian-pitch-deck.pdf)):
+[1 Cover](slides/01-cover.png) ·
+[2 The problem](slides/02-problem.png) ·
+[3 Why defences miss it](slides/03-gap.png) ·
+[4 Amma types nothing](slides/04-nothing-typed.png) ·
+[5 How it works](slides/05-how.png) ·
+[6 A live call, nothing typed](slides/06-live-call.png) ·
+[7 Five DevDay launches](slides/07-stack.png) ·
+[8 Results](slides/08-results.png) ·
+[9 AI agents and Rahul's Dot](slides/09-agents.png) ·
+[10 How we chose the problem](slides/10-research.png) ·
+[11 Try it](slides/11-try.png)
+
+---
+
 ## Contents
 
 - [What we built with OpenAI's newest platform](#-what-we-built-with-openais-newest-platform)
+- [Pitch deck](#️-pitch-deck)
 - [The problem](#-the-problem)
 - [What Guardian does](#-what-guardian-does)
 - [How it works](#-how-it-works)
@@ -433,6 +462,7 @@ guardian-gpt/
 │   ├── eval.js         # Evaluation + reliability report
 │   └── agent-demo.js   # Agents API shopping agent guarded by Guardian
 ├── research/           # The research that led to this project
+├── slides/             # The pitch deck: 11 slides as PNG + one PDF
 └── AGENTS.md           # Architecture + conventions for coding agents
 ```
 
@@ -506,6 +536,6 @@ Real police, courts and banks **never** ask you to pay over a call to "clear you
 
 <div align="center">
 
-Built at the **OpenAI Codex Community Hackathon · Bengaluru · October 2026**
+Built at the **OpenAI Codex Community Hackathon · Bengaluru · October 2026** by **Drishtant Ghosh** ([Drix10.com](https://drix10.com))
 
 </div>

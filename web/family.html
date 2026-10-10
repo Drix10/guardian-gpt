@@ -53,6 +53,8 @@ function render() {
     </article>`).join("");
 }
 
+const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+if (!isLocal) document.getElementById("clear").hidden = true;
 document.getElementById("clear").addEventListener("click", () => fetch("/api/reset", { method: "POST" }).catch(() => {}));
 
 document.addEventListener("click", async (e) => {

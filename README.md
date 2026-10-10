@@ -11,9 +11,13 @@ It reads the *whole situation* (the chat, the call, the screenshots, who is bein
 **Built entirely on OpenAI's DevDay 2026 launches:**
 **Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins with plugin extensions** · **Agents API** · **Dots-ready family agent**
 
-`~185 ms per decision` · `19 of 19 scams held` · `0 of 19 genuine payments wrongly held` · `works with nothing typed` · `English + हिन्दी` · `34 automated tests`
+`~185 ms per decision` · `19 of 19 scams held` · `0 of 19 genuine payments wrongly held` · `works with nothing typed` · `English + हिन्दी` · `36 automated tests`
 
 </div>
+
+> **🔴 Live demo (while we present, Oct 10 2026):** [pay app](https://tube-reprint-encourage-buffalo.trycloudflare.com/) · [family dashboard](https://tube-reprint-encourage-buffalo.trycloudflare.com/family.html) · [accuracy report](https://tube-reprint-encourage-buffalo.trycloudflare.com/eval.html)
+> **Try it in your own ChatGPT:** Plugins → **+** → *Add custom MCP server* → `https://tube-reprint-encourage-buffalo.trycloudflare.com/mcp` (no auth), then `@Guardian` in a chat.
+> The live link runs from the presenter's laptop; if it's down, follow [Quick start](#-quick-start) to run it locally in two minutes.
 
 ---
 
@@ -272,7 +276,7 @@ the phone shows *"Rahul blocked this payment. Your money is safe."* Then try **�
 | `npm run build` | Bundle the ChatGPT widget (esbuild) |
 | `npm start` | Start the API, web demo, and MCP server on `:8787` |
 | `npm run dev` | Build, then start |
-| `npm test` | 34 unit + integration tests (no API calls, no cost) |
+| `npm test` | 36 unit + integration tests (no API calls, no cost) |
 | `npm run test:live` | 3 tests against the real Decisions API and GPT-6.1 Sol |
 | `npm run eval` | Run the 38-case evaluation and write `web/eval.json` |
 | `npm run agent-demo -- <mcp-url>` | Run the Agents API shopping agent that must ask Guardian before paying |
@@ -445,7 +449,7 @@ guardian-gpt/
 ## ✅ Testing
 
 ```bash
-npm test            # 34 tests, ~1 s, no API calls
+npm test            # 36 tests, ~1 s, no API calls
 npm run test:live   # real Decisions API + GPT-6.1 Sol (a few cents)
 npm run eval        # 38 labelled payments → web/eval.json
 ```
@@ -460,7 +464,7 @@ The tests cover the verdict rule, the no-typing signals, input validation, the s
 |---|---|
 | Model returns an incomplete or refused answer | Rejected; falls back to Structured Outputs; if that fails too, **asks for a second look**. It never fails open to "allow". |
 | Slow or stuck API calls | Every call has a timeout and the whole check has a 20 s budget; explanations fall back to a canned message. |
-| Someone else using the public ChatGPT link | Only `/mcp` is reachable remotely (tunnel or Wi-Fi); the web demo, family decisions and reset are **localhost-only**. Optional `GUARDIAN_MCP_TOKEN` moves MCP to an unguessable path. |
+| Someone else using the public ChatGPT link | By default only `/mcp` is reachable remotely (tunnel or Wi-Fi). With `GUARDIAN_PUBLIC_DEMO=1`, visitors also get the web demo, but in a **separate public view**: they never see or decide the presenter's payments, and only the presenter's laptop can clear history. Optional `GUARDIAN_MCP_TOKEN` moves MCP to an unguessable path. |
 | Cost abuse | Separate rate limits for local and public traffic (30/min, 600/day public), so the public link can never starve the live demo. |
 | Prompt injection via scammer text | Model-written explanations are passed back to ChatGPT as fenced, quoted data; releasing money needs an explicit human confirmation. |
 | Approving after a block, double decisions | A payment can only be decided while it is waiting; later attempts get the true current state (HTTP 409). |

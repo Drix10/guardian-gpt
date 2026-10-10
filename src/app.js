@@ -18,18 +18,20 @@ export function isRemote(req) {
 export const MCP_PATH = process.env.GUARDIAN_MCP_TOKEN ? `/mcp/${process.env.GUARDIAN_MCP_TOKEN}` : "/mcp";
 export const isMcpPath = (p) => p === MCP_PATH;
 
-export function createApp({ limiter = checkLimiter } = {}) {
+export function createApp({ limiter = checkLimiter, publicDemo = process.env.GUARDIAN_PUBLIC_DEMO === "1" } = {}) {
   const app = express();
   app.disable("x-powered-by");
 
-  // Only /mcp is public. Everything else (web demo, family decisions, reset) is localhost-only,
-  // and this runs before any request body is read.
+  // By default only /mcp is public. With GUARDIAN_PUBLIC_DEMO=1 the web demo is public too, but in its
+  // own "public" view (visitors never see or touch the stage demo), and reset stays localhost-only.
+  // This runs before any request body is read.
   app.use((req, res, next) => {
-    if (isRemote(req) && !isMcpPath(req.path)) {
-      return res.status(403).json({ error: "Only /mcp is available remotely." });
-    }
+    if (!isRemote(req) || isMcpPath(req.path)) return next();
+    if (!publicDemo) return res.status(403).json({ error: "Only /mcp is available remotely." });
+    if (req.path === "/api/reset") return res.status(403).json({ error: "Clearing history is only available on the presenter's laptop." });
     next();
   });
+  const viewOf = (req) => (isRemote(req) ? "public" : "main");
 
   // Body size per route: screenshots only ever arrive at /api/check.
   app.use("/api/check", express.json({ limit: "30mb" }));
@@ -38,20 +40,22 @@ export function createApp({ limiter = checkLimiter } = {}) {
   app.post("/api/check", async (req, res) => {
     const parsed = checkSchema.safeParse(req.body ?? {});
     if (!parsed.success) return res.status(400).json({ error: formatIssues(parsed.error) });
-    if (!limiter("local")) return res.status(429).json({ error: "Too many checks right now. Try again in a minute." });
+    if (!limiter(isRemote(req) ? "remote" : "local")) return res.status(429).json({ error: "Too many checks right now. Try again in a minute." });
     try {
-      res.json(store.record(await assess(parsed.data)));
+      res.json(store.record(await assess(parsed.data), viewOf(req)));
     } catch (err) {
       console.error("[check]", err);
       res.status(502).json({ error: "Guardian couldn't reach the decision service. Try again." });
     }
   });
 
-  app.get("/api/payments", (_req, res) => res.json(store.list()));
+  app.get("/api/payments", (req, res) => res.json(store.list(viewOf(req))));
 
   app.post("/api/payments/:id/decision", (req, res) => {
     const parsed = decisionSchema.safeParse(req.body ?? {});
     if (!parsed.success) return res.status(400).json({ error: formatIssues(parsed.error) });
+    // Each view can only decide its own payments.
+    if ((store.get(req.params.id)?.view ?? "main") !== viewOf(req) && store.get(req.params.id)) return res.status(404).json({ error: "No such payment." });
     const { item, error } = store.resolve(req.params.id, parsed.data.decision, parsed.data.by ?? "family (web)");
     if (error === "not_found") return res.status(404).json({ error: "No such payment." });
     if (error === "not_waiting") return res.status(409).json({ error: `This payment is already ${item.status}.`, item });
@@ -66,7 +70,8 @@ export function createApp({ limiter = checkLimiter } = {}) {
   app.get("/api/events", (req, res) => {
     res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
     res.flushHeaders();
-    const send = (item) => res.write(`data: ${JSON.stringify(item)}\n\n`);
+    const view = viewOf(req);
+    const send = (item) => { if ((item.view ?? "main") === view) res.write(`data: ${JSON.stringify(item)}\n\n`); };
     const reset = () => res.write(`data: {"reset":true}\n\n`);
     // Comment line keeps proxies from closing an idle stream.
     const heartbeat = setInterval(() => res.write(": ping\n\n"), HEARTBEAT_MS);

@@ -197,3 +197,36 @@ test("MCP: check output fences the model-written explanation", async () => {
   assert.equal(r.result.structuredContent.kind, "dashboard");
   assert.equal(r.result.structuredContent.items.length, 1);
 });
+
+test("public demo mode: visitors get the web demo in their own view, can't reset, can't touch the stage demo", async () => {
+  const demo = createApp({ limiter: () => true, publicDemo: true }).listen(0);
+  await new Promise((r) => demo.once("listening", r));
+  const port = demo.address().port;
+  const as = (method, path, host, body) => new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, method, path, headers: { Host: host, "Content-Type": "application/json" } }, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => resolve({ status: res.statusCode, body: data }));
+    });
+    req.on("error", reject);
+    req.end(body ? JSON.stringify(body) : undefined);
+  });
+  const PUBLIC = "tube-x.trycloudflare.com";
+  store.clear();
+  const stage = store.record({ verdict: "hold", probability: 1, payment: { amount: 1 } }); // main view
+  const visitor = store.record({ verdict: "hold", probability: 1, payment: { amount: 2 } }, "public");
+
+  assert.equal((await as("GET", "/", PUBLIC)).status, 200, "public can open the pay app");
+  assert.equal((await as("GET", "/family.html", PUBLIC)).status, 200);
+  assert.equal((await as("POST", "/api/reset", PUBLIC, {})).status, 403, "only the presenter can clear history");
+
+  const publicList = JSON.parse((await as("GET", "/api/payments", PUBLIC)).body);
+  assert.deepEqual(publicList.map((p) => p.id), [visitor.id], "visitors see only public payments");
+  const localList = JSON.parse((await as("GET", "/api/payments", "localhost:8787")).body);
+  assert.deepEqual(localList.map((p) => p.id), [stage.id], "the stage sees only its own payments");
+
+  assert.equal((await as("POST", `/api/payments/${stage.id}/decision`, PUBLIC, { decision: "approve" })).status, 404, "visitors can't decide stage payments");
+  assert.equal(store.get(stage.id).status, "awaiting_family");
+  assert.equal((await as("POST", `/api/payments/${visitor.id}/decision`, PUBLIC, { decision: "block" })).status, 200);
+  await new Promise((r) => demo.close(r));
+});

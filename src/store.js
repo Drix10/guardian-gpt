@@ -10,9 +10,10 @@ export const MAX_PAYMENTS = 500;
 export const MAX_WAITING = 200; // even held payments expire past this many (oldest first)
 const payments = new Map();
 
-export function record(assessment) {
+export function record(assessment, view = "main") {
   const item = {
     ...assessment,
+    view,
     id: randomUUID().slice(0, 8),
     createdAt: new Date().toISOString(),
     status: assessment.verdict === "hold" ? "awaiting_family" : assessment.verdict === "warn" ? "warned" : "allowed",
@@ -38,8 +39,9 @@ function evict() {
   }
 }
 
-export function list() {
-  return [...payments.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || 0);
+export function list(view) {
+  const all = [...payments.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || 0);
+  return view ? all.filter((p) => (p.view ?? "main") === view) : all;
 }
 
 export function get(id) {

@@ -22,7 +22,8 @@
 </div>
 <script type="module">
 const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;
-const STAMP = { hold: "Held", warn: "Check", allow: "Clear" };
+// The stamp follows the payment's life: Held → Blocked / Approved.
+const stampFor = (i) => i.status === "blocked" ? ["Blocked", "hold"] : i.status === "approved" ? ["Approved", "allow"] : [{ hold: "Held", warn: "Check", allow: "Clear" }[i.verdict], i.verdict];
 const STATUS = { approved: "You approved this payment", blocked: "You blocked this payment", warned: "Amma was warned before paying", allowed: "Went through normally" };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 let items = [];
@@ -33,7 +34,7 @@ function render() {
     waiting === 0 ? "Nothing needs you right now" : waiting === 1 ? "One payment is waiting for you" : `${waiting} payments are waiting for you`;
   document.getElementById("list").innerHTML = items.map((i) => `
     <article class="card">
-      <span class="stamp ${i.verdict}">${STAMP[i.verdict]}</span>
+      <span class="stamp ${stampFor(i)[1]}">${stampFor(i)[0]}</span>
       <div class="who">₹${(i.payment?.amount ?? 0).toLocaleString("en-IN")} to ${esc(i.payment?.payeeName)}
         <small>${esc(i.payment?.payeeId)}, ${pct(i.probability)} chance of a scam (${esc(i.scamType.replaceAll("_", " "))})</small></div>
       ${i.explanation ? `<div class="explain">${esc(i.explanation)}</div>` : ""}

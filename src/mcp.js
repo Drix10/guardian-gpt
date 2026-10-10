@@ -87,7 +87,7 @@ function buildServer() {
   }, async ({ id, decision }) => {
     const item = store.resolve(id, decision, "family (ChatGPT)");
     return {
-      structuredContent: dashboard(),
+      structuredContent: { kind: "resolved", item, items: dashboard().items },
       content: [{ type: "text", text: item ? `Payment ${id} ${item.status}.` : `No payment ${id}.` }],
     };
   });

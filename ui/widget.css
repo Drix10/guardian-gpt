@@ -1,24 +1,31 @@
-.g-root { padding: 12px; font-family: inherit; }
-.g-h { margin: 0 0 4px; font-size: 18px; }
-.g-muted { opacity: .65; font-size: 12px; }
-.g-card { margin: 10px 0; padding: 14px; border-radius: 14px; border-left: 4px solid #22a06b; }
-.g-card.bad { border-left-color: #e5484d; }
-.g-card.warn { border-left-color: #f5a524; }
-.g-card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
-.g-pill { font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #22a06b22; color: #22a06b; }
-.g-pill.bad { background: #e5484d22; color: #e5484d; }
-.g-pill.warn { background: #f5a52422; color: #b07400; }
-.g-amt { font-size: 13px; font-weight: 600; }
-.g-big { font-size: 28px; font-weight: 800; margin: 4px 0 10px; }
-.g-big small { font-size: 12px; font-weight: 500; opacity: .7; }
-.g-bar { display: grid; grid-template-columns: 1fr 120px 40px; align-items: center; gap: 8px; font-size: 12px; margin: 4px 0; }
-.g-track { height: 8px; border-radius: 99px; background: #8882; overflow: hidden; }
-.g-fill { height: 100%; background: #22a06b; }
-.g-fill.warn { background: #f5a524; }
-.g-fill.bad { background: #e5484d; }
-.g-explain { margin: 10px 0 6px; font-size: 14px; line-height: 1.45; }
-.g-actions { display: flex; gap: 8px; margin-top: 10px; }
-.g-status { margin-top: 8px; font-size: 12px; font-weight: 700; }
-.g-status.blocked { color: #e5484d; }
-.g-status.approved, .g-status.allowed { color: #22a06b; }
+/* Guardian card inside ChatGPT: same paper, ink and stamp as the web demo, but in the host's system font. */
+.g-root { padding: 12px; font-family: inherit; color: #1c2a3a; word-spacing: 0.04em; background: #e9f0ea; border-radius: 8px; }
+.g-h { margin: 0 0 4px; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
+.g-muted { color: #4d5d6c; font-size: 13px; }
+.g-card { margin: 10px 0; padding: 16px 18px; border: 1px solid #b8cbbd; border-radius: 4px; position: relative;
+  background-color: #f4f8f4;
+  background-image: repeating-radial-gradient(circle at 0 0, transparent 0 13px, #e3ece5 13px 14px);
+  background-size: 44px 44px; }
+.g-amt { font-size: 16px; font-weight: 700; padding-right: 130px; }
+.g-sub { font-size: 13px; color: #4d5d6c; margin: 2px 0 8px; }
+.g-big { font-family: Georgia, "Times New Roman", serif; font-size: 40px; line-height: 1; margin: 6px 0 2px; }
+.g-big small { display: block; font-family: inherit; font-size: 13px; color: #4d5d6c; margin-top: 4px; }
+.g-stamp { position: absolute; top: 14px; right: 16px; display: inline-block; font-weight: 800; font-size: 20px; letter-spacing: .08em;
+  text-transform: uppercase; color: #c8102e; border: 4px double currentColor; padding: 5px 11px 3px; transform: rotate(-7deg); opacity: .92; }
+.g-stamp.allow { color: #1e6b48; }
+.g-stamp.warn { color: #a86a12; }
+.g-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(56px, 30%) 40px; align-items: center; gap: 10px; font-size: 13px; padding: 4px 0; border-bottom: 1px dotted #b8cbbd; }
+.g-bar b { text-align: right; font-variant-numeric: tabular-nums; }
+.g-track { height: 8px; background: #fff; border: 1px solid #b8cbbd; }
+.g-fill { height: 100%; background: #1e6b48; }
+.g-fill.warn { background: #a86a12; }
+.g-fill.bad { background: repeating-linear-gradient(-45deg, #c8102e 0 5px, #a50d26 5px 8px); }
+.g-explain { margin: 12px 0 6px; padding-left: 12px; border-left: 3px solid #1c2a3a; font-size: 15px; line-height: 1.5; }
+.g-foot { font-size: 12px; color: #4d5d6c; margin-top: 8px; }
+.g-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.g-actions .btn { border-radius: 2px; }
+.g-actions .g-block { background: #c8102e; border-color: #c8102e; color: #fff; }
+.g-status { margin-top: 10px; font-size: 14px; font-weight: 700; }
+.g-status.blocked { color: #c8102e; }
+.g-status.approved, .g-status.allowed { color: #1e6b48; }
 .g-refresh { margin-top: 6px; }

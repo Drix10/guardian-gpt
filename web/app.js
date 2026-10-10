@@ -30,9 +30,9 @@ const SCENARIOS = [
   {
     id: "legit", names: { them: "Ravi, son", me: "Amma", safe: true }, label: "✅ Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false },
     chat: [
-      ["them", "Amma, BESCOM bill came ₹4,480. I paid last month, can you do this one? Sending you the bill photo."],
-      ["me", "Ok kanna, I will send to your SBI UPI, same as always."],
-      ["them", "Thanks Amma, I'll call you tonight after office 📞"],
+      ["them", "Amma, the BESCOM bill came, ₹4,480. Can you send me ₹4,500 on my SBI UPI? I'll pay it from my app tonight like every month."],
+      ["me", "Ok kanna, sending to your usual UPI now."],
+      ["them", "Thanks Amma, I'll call you after office 📞"],
     ],
   },
   {
@@ -114,6 +114,7 @@ async function pay() {
     firstTime: $("firstTime").checked, actor: current.payment.actor,
   };
   const context = current.chat.map(([who, t]) => `${who === "me" ? "PAYER" : "OTHER PARTY"}: ${t}`).join("\n");
+  phoneLang = language;
   showPhone("checking");
   $("result").className = "result";
   $("result").innerHTML = `<div class="spinner"></div><p>Reading the conversation and the payment…</p>`;
@@ -135,15 +136,21 @@ async function pay() {
 
 const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;
 const LABELS = {
-  impersonates_authority: "Pretends to be police / bank / govt",
-  pressure_or_secrecy: "Threats, urgency or secrecy",
-  payee_mismatch: "Payee doesn't match the story",
+  impersonates_authority: "Claims to be police, bank or govt",
+  pressure_or_secrecy: "Threats, rush or secrecy",
+  payee_mismatch: "Payee doesn't fit the story",
 };
 const tone = (p) => (p >= 0.8 ? "bad" : p >= 0.35 ? "warn" : "ok");
 const bar = (label, p) => `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${tone(p)}" style="width:${pct(p)}"></div></div><b>${pct(p)}</b></div>`;
+const inr = (n) => Number(n ?? 0).toLocaleString("en-IN");
 
-const STAMP = { hold: "Held", warn: "Check", allow: "Clear" };
-const STAMP_SUB = { hold: "Payment paused until family approves", warn: "Payment needs a second look", allow: "Payment goes through" };
+// The stamp follows the payment's life: Held → Blocked / Approved.
+const STAMP = { hold: ["Held", "hold"], warn: ["Check", "warn"], allow: ["Clear", "allow"], blocked: ["Blocked", "hold"], approved: ["Approved", "allow"] };
+const STAMP_SUB = {
+  hold: "Payment paused until family approves", warn: "Payment needs a second look", allow: "Payment goes through",
+  blocked: "Rahul blocked it from the family dashboard", approved: "Rahul approved it from the family dashboard",
+};
+const stamp = (key) => `<span class="stamp land ${STAMP[key][1]}" id="verdictStamp">${STAMP[key][0]}</span>`;
 
 function renderResult(item) {
   const types = (item.scamTypeProbabilities ?? []).filter((t) => t.probability >= 0.02).sort((a, b) => b.probability - a.probability).slice(0, 3);
@@ -151,9 +158,9 @@ function renderResult(item) {
   $("result").innerHTML = `
     <div class="verdict-row">
       <div class="big">${pct(item.probability)}<small>chance this is a scam</small></div>
-      <span class="stamp land ${item.verdict}">${STAMP[item.verdict]}</span>
+      ${stamp(item.verdict)}
     </div>
-    <p class="stamp-sub">${STAMP_SUB[item.verdict]}</p>
+    <p class="stamp-sub" id="stampSub">${STAMP_SUB[item.verdict]}</p>
     ${item.signals.map((s) => bar(LABELS[s.name], s.probability)).join("")}
     <h3>Which scam it looks like</h3>
     ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability)).join("")}
@@ -162,23 +169,53 @@ function renderResult(item) {
     <p class="policy">Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.</p>`;
 }
 
+// Phone copy follows the language the payer chose.
+const PHONE = {
+  en: {
+    checking: "Guardian is checking…",
+    paid: (p) => `Paid ₹${inr(p.amount)}`, to: (p) => `to ${p.payeeName}`,
+    warnTitle: "Wait, this looks unusual", cancel: "Cancel payment",
+    held: "Payment paused", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
+    blocked: "Rahul blocked this payment. Your money is safe.", report: "To report it, call 1930 or visit cybercrime.gov.in",
+    approved: "Rahul approved it. Payment sent.", reset: "↺ reset",
+  },
+  hi: {
+    checking: "Guardian जाँच कर रहा है…",
+    paid: (p) => `₹${inr(p.amount)} का भुगतान हो गया`, to: (p) => `${p.payeeName} को`,
+    warnTitle: "रुकिए, यह असामान्य लग रहा है", cancel: "भुगतान रद्द करें",
+    held: "भुगतान रोका गया", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
+    blocked: "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
+    approved: "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", reset: "↺ फिर से",
+  },
+};
+let phoneLang = "en";
+
 function showPhone(state, item) {
   const s = $("screen");
-  if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>Guardian is checking…</p></div>`;
-  if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">✓</div><h3>Paid ₹${item.payment.amount.toLocaleString("en-IN")}</h3><p>to ${item.payment.payeeName}</p></div>`;
-  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">!</div><h3>Wait — this looks unusual</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">Cancel</button></div>`;
-  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">✋</div><h3>Payment paused</h3><p>${item.explanation ?? ""}</p>
-      <div class="waiting" id="waiting">We've asked your son Rahul to confirm. You'll see his answer here.</div></div>`;
-  s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">↺ reset</button>`);
+  const t = PHONE[phoneLang] ?? PHONE.en;
+  if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>${t.checking}</p></div>`;
+  if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">✓</div><h3>${t.paid(item.payment)}</h3><p>${t.to(item.payment)}</p></div>`;
+  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">!</div><h3>${t.warnTitle}</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
+  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">✋</div><h3>${t.held}</h3><p>${item.explanation ?? ""}</p>
+      <div class="waiting" id="waiting">${t.waiting}</div></div>`;
+  s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">${t.reset}</button>`);
 }
 
 // Live updates when the family approves/blocks (from ChatGPT or the web dashboard).
 new EventSource("/api/events").onmessage = (e) => {
   const item = JSON.parse(e.data);
-  if (item.reset) return;
-  if (item.id !== currentId || !$("waiting")) return;
-  if (item.status === "blocked") $("waiting").outerHTML = `<div class="waiting done bad">Rahul blocked this payment. Your money is safe.<br><small>To report it, call 1930 or visit cybercrime.gov.in</small></div>`;
-  if (item.status === "approved") $("waiting").outerHTML = `<div class="waiting done ok">Rahul approved it. Payment sent.</div>`;
+  if (item.reset || item.id !== currentId) return;
+  if (item.status !== "blocked" && item.status !== "approved") return;
+  const t = PHONE[phoneLang] ?? PHONE.en;
+  if ($("waiting")) {
+    $("waiting").outerHTML = item.status === "blocked"
+      ? `<div class="waiting done bad">${t.blocked}<br><small>${t.report}</small></div>`
+      : `<div class="waiting done ok">${t.approved}</div>`;
+  }
+  if ($("verdictStamp")) {
+    $("verdictStamp").outerHTML = stamp(item.status);
+    $("stampSub").textContent = STAMP_SUB[item.status];
+  }
 };
 
 window.__reset = () => loadScenario(current);

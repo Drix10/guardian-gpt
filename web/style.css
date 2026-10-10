@@ -41,7 +41,8 @@ nav a.on, nav a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
 /* Stage */
 .stage { display: grid; grid-template-columns: minmax(0, 1fr) 360px minmax(0, 1.1fr); gap: 28px; padding: 26px 28px 40px; align-items: start; max-width: 1500px; margin: 0 auto; }
-@media (max-width: 1150px) { .stage { grid-template-columns: 1fr; } .phone { margin: 0 auto; width: min(360px, 100%); } }
+@media (max-width: 1400px) { .stage { grid-template-columns: minmax(0, 1fr) 320px minmax(0, 1.15fr); gap: 20px; padding: 22px 20px 36px; } .panel { padding: 18px 18px 22px; } .chat { grid-template-columns: 66px 1fr; } }
+@media (max-width: 1080px) { .stage { grid-template-columns: 1fr; } .phone { margin: 0 auto; width: min(360px, 100%); } }
 .panel { background: var(--paper-2); border: 1px solid var(--rule); padding: 20px 22px 24px; min-height: 600px; }
 h2 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.15; margin: 0 0 14px; }
 h3 { font-size: 15px; font-weight: 700; color: var(--ink-soft); margin: 18px 0 6px; }
@@ -114,7 +115,7 @@ h3 { font-size: 15px; font-weight: 700; color: var(--ink-soft); margin: 18px 0 6
 .big small { display: block; font-family: var(--body); font-size: 16px; color: var(--ink-soft); margin-top: 4px; }
 .stamp-sub { font-size: 16px; color: var(--ink-soft); margin: 2px 0 14px; }
 
-.bar { display: grid; grid-template-columns: minmax(0, 1fr) 150px 46px; gap: 12px; align-items: center; font-size: 15px; padding: 5px 0; border-bottom: 1px dotted var(--rule); }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(56px, 30%) 46px; gap: 12px; align-items: center; font-size: 15px; padding: 5px 0; border-bottom: 1px dotted var(--rule); }
 .bar b { text-align: right; font-variant-numeric: tabular-nums; }
 .track { height: 10px; background: #fff; border: 1px solid var(--rule); }
 .fill { height: 100%; background: var(--ledger); transition: width .5s ease; }

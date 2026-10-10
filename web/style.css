@@ -152,3 +152,5 @@ th { font-weight: 700; color: var(--ink-soft); }
 td.hold { color: var(--stamp); font-weight: 700; }
 td.allow { color: var(--ledger); font-weight: 700; }
 .note { color: var(--ink-soft); font-size: 15px; }
+.quiet { font: 600 15px var(--body); color: var(--ink-soft); background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 0 0 1px; cursor: pointer; margin-bottom: 8px; }
+.quiet:hover { color: var(--ink); border-bottom-color: var(--ink); }

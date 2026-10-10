@@ -17,6 +17,7 @@
 <div class="wrap">
   <h2 id="headline">Nothing needs you right now</h2>
   <p class="lede">When Guardian pauses a payment from Amma's phone, it appears here first. You decide whether the money moves.</p>
+  <button id="clear" class="quiet">Clear history</button>
   <div id="list"></div>
 </div>
 <script type="module">
@@ -42,6 +43,8 @@ function render() {
     </article>`).join("");
 }
 
+document.getElementById("clear").addEventListener("click", () => fetch("/api/reset", { method: "POST" }));
+
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-id]");
   if (!b) return;
@@ -53,6 +56,7 @@ items = await (await fetch("/api/payments")).json();
 render();
 new EventSource("/api/events").onmessage = (e) => {
   const item = JSON.parse(e.data);
+  if (item.reset) { items = []; return render(); }
   items = [item, ...items.filter((i) => i.id !== item.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   render();
 };

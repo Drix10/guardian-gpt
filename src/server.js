@@ -32,16 +32,30 @@ app.post("/api/payments/:id/decision", (req, res) => {
   item ? res.json(item) : res.sendStatus(404);
 });
 
+app.post("/api/reset", (_req, res) => {
+  store.clear();
+  res.json({ ok: true });
+});
+
 app.get("/api/events", (req, res) => {
   res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
   res.flushHeaders();
   const send = (item) => res.write(`data: ${JSON.stringify(item)}\n\n`);
+  const reset = () => res.write(`data: {"reset":true}\n\n`);
   store.events.on("update", send);
-  req.on("close", () => store.events.off("update", send));
+  store.events.on("reset", reset);
+  req.on("close", () => {
+    store.events.off("update", send);
+    store.events.off("reset", reset);
+  });
 });
 
 mountMcp(app);
 app.use(express.static(path.resolve(import.meta.dirname, "../web")));
 
 const port = Number(process.env.PORT ?? 8787);
-app.listen(port, () => console.log(`Guardian on http://localhost:${port}  (MCP: /mcp)`));
+app.listen(port, () => console.log(`Guardian on http://localhost:${port}  (MCP: /mcp)`)).on("error", (err) => {
+  if (err.code === "EADDRINUSE") console.error(`Port ${port} is already in use: Guardian is probably already running. Open http://localhost:${port}`);
+  else console.error(err);
+  process.exit(1);
+});

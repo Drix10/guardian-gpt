@@ -175,6 +175,7 @@ function showPhone(state, item) {
 // Live updates when the family approves/blocks (from ChatGPT or the web dashboard).
 new EventSource("/api/events").onmessage = (e) => {
   const item = JSON.parse(e.data);
+  if (item.reset) return;
   if (item.id !== currentId || !$("waiting")) return;
   if (item.status === "blocked") $("waiting").outerHTML = `<div class="waiting done bad">Rahul blocked this payment. Your money is safe.<br><small>To report it, call 1930 or visit cybercrime.gov.in</small></div>`;
   if (item.status === "approved") $("waiting").outerHTML = `<div class="waiting done ok">Rahul approved it. Payment sent.</div>`;

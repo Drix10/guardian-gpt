@@ -33,3 +33,8 @@ export function resolve(id, decision, by = "family") {
   events.emit("update", item);
   return item;
 }
+
+export function clear() {
+  payments.clear();
+  events.emit("reset");
+}

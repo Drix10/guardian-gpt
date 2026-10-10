@@ -91,12 +91,23 @@ function downscale(file, max = 1024) {
   });
 }
 
+// The phone screen is re-rendered often, so listen on the container (event delegation).
 const PHONE_FORM = $("screen").innerHTML;
+let language = "en";
 function resetPhone() {
-  $("screen").innerHTML = PHONE_FORM.replace(/<div class="pay">[\s\S]*/, $("screen").innerHTML.includes("pay-h") ? $("screen").innerHTML : PHONE_FORM);
+  $("screen").innerHTML = PHONE_FORM;
+  $("language").value = language;
 }
+$("screen").addEventListener("click", (e) => {
+  if (e.target.closest("#payBtn")) pay();
+});
+$("screen").addEventListener("input", (e) => {
+  if (e.target.id === "amount") $("amtLabel").textContent = Number(e.target.value || 0).toLocaleString("en-IN");
+});
+$("screen").addEventListener("change", (e) => {
+  if (e.target.id === "language") language = e.target.value;
+});
 
-$("payBtn").addEventListener("click", pay);
 async function pay() {
   const payment = {
     payeeName: $("payeeName").value, payeeId: $("payeeId").value, amount: Number($("amount").value),
@@ -106,14 +117,20 @@ async function pay() {
   showPhone("checking");
   $("result").className = "result";
   $("result").innerHTML = `<div class="spinner"></div><p>Asking the Decisions API…</p>`;
-  const res = await fetch("/api/check", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ payment, context, images, language: $("language").value }),
-  });
-  const item = await res.json();
-  currentId = item.id;
-  renderResult(item);
-  showPhone(item.verdict, item);
+  try {
+    const res = await fetch("/api/check", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payment, context, images, language }),
+    });
+    const item = await res.json();
+    if (!res.ok) throw new Error(item.error ?? `HTTP ${res.status}`);
+    currentId = item.id;
+    renderResult(item);
+    showPhone(item.verdict, item);
+  } catch (err) {
+    loadScenario(current);
+    $("result").innerHTML = `<div class="verdict hold">Error: ${err.message}</div><p>Is the server running and is OPENAI_API_KEY set in .env?</p>`;
+  }
 }
 
 const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;

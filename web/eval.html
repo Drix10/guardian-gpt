@@ -4,35 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guardian · Accuracy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top"><div class="brand">🛡️ Guardian <span>How well does it work?</span></div></header>
+<header class="top">
+  <div class="brand">Guardian<span>how well it works</span></div>
+  <nav><a href="/">Pay app</a><a href="/family.html">Family dashboard</a><a href="/eval.html" class="on">Accuracy</a></nav>
+</header>
 <div class="wrap">
-  <div class="kpis" id="kpis"></div>
-  <div class="card">
-    <h3>Is the confidence honest? (predicted scam probability vs. actual)</h3>
-    <table id="rel"></table>
-  </div>
-  <div class="card">
-    <h3>Every case</h3>
-    <table id="rows"></table>
-  </div>
-  <p style="color:var(--muted);font-size:13px">30 hand-labelled cases: 15 scams across 7 patterns (digital arrest, trading/task, KYC phishing, UPI collect-request, family impersonation, lottery/job, AI-agent fake checkout) and 15 deliberately hard genuine payments. Small test set — a sanity check, not a production benchmark.</p>
+  <h2>We tested Guardian on 30 payments before showing it to anyone</h2>
+  <p class="lede">Fifteen scams across seven patterns, and fifteen genuine payments chosen to be hard: a son abroad asking for fees, a real police e-challan, a first payment to a plumber, a friend's hospital loan.</p>
+  <div class="figures" id="figures"></div>
+
+  <h3>Is the confidence honest?</h3>
+  <p class="note">If Guardian says 90%, roughly 90% of those cases should really be scams.</p>
+  <table id="rel"></table>
+
+  <h3>Every case</h3>
+  <table id="rows"></table>
+  <p class="note">A small, hand-written test set: a sanity check, not a production benchmark. Thresholds would be re-calibrated on real reported scams before deployment.</p>
 </div>
 <script type="module">
 const r = await (await fetch("eval.json")).json();
 const pct = (x) => `${Math.round(x * 100)}%`;
-document.getElementById("kpis").innerHTML = [
-  [pct(r.hold.recall), "scams caught (hold ≥ 80%)"],
-  [pct(r.hold.falsePositiveRate), "genuine payments wrongly held"],
-  [pct(r.scamTypeAccuracy), "scam pattern identified"],
-  [`${r.latencyMs.median} ms`, `median decision (p95 ${r.latencyMs.p95} ms)`],
-].map(([b, s]) => `<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join("");
-document.getElementById("rel").innerHTML = `<tr><th>Predicted</th><th>Cases</th><th>Actually scams</th></tr>` +
-  r.reliability.map((b) => `<tr><td>${b.bin}</td><td>${b.n}</td><td>${b.actualScamRate == null ? "—" : pct(b.actualScamRate)}</td></tr>`).join("");
-document.getElementById("rows").innerHTML = `<tr><th>Case</th><th>Truth</th><th>Scam prob.</th><th>Verdict</th><th>Pattern</th><th>ms</th></tr>` +
-  r.rows.map((x) => `<tr><td>${x.id}</td><td>${x.label}</td><td>${pct(x.probability)}</td><td>${x.verdict}</td><td>${x.scam_type_pred.replaceAll("_", " ")}</td><td>${x.ms}</td></tr>`).join("");
+const caught = Math.round(r.hold.recall * r.rows.filter((x) => x.label === "scam").length);
+const wrong = Math.round(r.hold.falsePositiveRate * r.rows.filter((x) => x.label === "legit").length);
+document.getElementById("figures").innerHTML = [
+  [`${caught} of 15`, "scams held before the money moved"],
+  [`${wrong} of 15`, "genuine payments wrongly held"],
+  [pct(r.scamTypeAccuracy), "scam pattern named correctly"],
+  [`${r.latencyMs.median} ms`, `typical decision time (slowest 5%: ${r.latencyMs.p95} ms)`],
+].map(([b, s]) => `<div class="figure"><b>${b}</b><span>${s}</span></div>`).join("");
+document.getElementById("rel").innerHTML = `<tr><th>Guardian said</th><th>Cases</th><th>Actually scams</th></tr>` +
+  r.reliability.map((b) => `<tr><td>${b.bin.replace("–", " to ")}</td><td>${b.n}</td><td>${b.actualScamRate == null ? "none in this range" : pct(b.actualScamRate)}</td></tr>`).join("");
+document.getElementById("rows").innerHTML = `<tr><th>Case</th><th>Truth</th><th>Scam chance</th><th>Decision</th><th>Pattern</th><th>Time</th></tr>` +
+  r.rows.map((x) => `<tr><td>${x.id}</td><td>${x.label === "scam" ? "Scam" : "Genuine"}</td><td>${pct(x.probability)}</td><td class="${x.verdict}">${{ hold: "Held", warn: "Check", allow: "Clear" }[x.verdict]}</td><td>${x.scam_type_pred.replaceAll("_", " ")}</td><td>${x.ms} ms</td></tr>`).join("");
 </script>
 </body>
 </html>

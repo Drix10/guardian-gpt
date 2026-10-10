@@ -4,31 +4,51 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guardian · Family</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top"><div class="brand">🛡️ Guardian <span>Family dashboard · Rahul</span></div></header>
-<div class="wrap"><div id="list"></div></div>
+<header class="top">
+  <div class="brand">Guardian<span>Rahul's family view</span></div>
+  <nav><a href="/">Pay app</a><a href="/family.html" class="on">Family dashboard</a><a href="/eval.html">Accuracy</a></nav>
+</header>
+<div class="wrap">
+  <h2 id="headline">Nothing needs you right now</h2>
+  <p class="lede">When Guardian pauses a payment from Amma's phone, it appears here first. You decide whether the money moves.</p>
+  <div id="list"></div>
+</div>
 <script type="module">
 const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;
-const STATUS = { awaiting_family: "⏳ Waiting for you", approved: "✅ Approved", blocked: "🛑 Blocked", warned: "⚠️ Warned", allowed: "✅ Allowed" };
+const STAMP = { hold: "Held", warn: "Check", allow: "Clear" };
+const STATUS = { approved: "You approved this payment", blocked: "You blocked this payment", warned: "Amma was warned before paying", allowed: "Went through normally" };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 let items = [];
+
 function render() {
-  document.getElementById("list").innerHTML = items.length ? items.map((i) => `
-    <div class="card ${i.verdict}">
-      <b>₹${(i.payment?.amount ?? 0).toLocaleString("en-IN")} → ${i.payment?.payeeName} <small style="color:var(--muted)">${i.payment?.payeeId}</small></b>
-      <div class="big" style="font-size:30px">${pct(i.probability)}<small> scam · ${i.scamType.replaceAll("_", " ")}</small></div>
-      ${i.explanation ? `<div class="explain">${i.explanation}</div>` : ""}
+  const waiting = items.filter((i) => i.status === "awaiting_family").length;
+  document.getElementById("headline").textContent =
+    waiting === 0 ? "Nothing needs you right now" : waiting === 1 ? "One payment is waiting for you" : `${waiting} payments are waiting for you`;
+  document.getElementById("list").innerHTML = items.map((i) => `
+    <article class="card">
+      <span class="stamp ${i.verdict}">${STAMP[i.verdict]}</span>
+      <div class="who">₹${(i.payment?.amount ?? 0).toLocaleString("en-IN")} to ${esc(i.payment?.payeeName)}
+        <small>${esc(i.payment?.payeeId)}, ${pct(i.probability)} chance of a scam (${esc(i.scamType.replaceAll("_", " "))})</small></div>
+      ${i.explanation ? `<div class="explain">${esc(i.explanation)}</div>` : ""}
       ${i.status === "awaiting_family"
-        ? `<div class="actions"><button class="b-block" data-id="${i.id}" data-d="block">Block payment</button><button class="b-approve" data-id="${i.id}" data-d="approve">Approve</button></div>`
-        : `<div class="status">${STATUS[i.status]}</div>`}
-    </div>`).join("") : `<p style="color:var(--muted)">No payments yet.</p>`;
+        ? `<div class="actions"><button class="b-block" data-id="${i.id}" data-d="block">Block payment</button><button data-id="${i.id}" data-d="approve">Approve payment</button></div>`
+        : `<p class="status ${i.status}">${STATUS[i.status] ?? i.status}</p>`}
+    </article>`).join("");
 }
+
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-id]");
   if (!b) return;
+  b.disabled = true;
   await fetch(`/api/payments/${b.dataset.id}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision: b.dataset.d }) });
 });
+
 items = await (await fetch("/api/payments")).json();
 render();
 new EventSource("/api/events").onmessage = (e) => {

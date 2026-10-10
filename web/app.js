@@ -1,6 +1,6 @@
 const SCENARIOS = [
   {
-    id: "arrest", label: "🚔 Digital arrest", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
+    id: "arrest", names: { them: "Caller", me: "Amma" }, label: "🚔 Digital arrest", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
     chat: [
       ["them", "📹 WhatsApp video call · +91 98XXX XXX21 · man in police uniform, CBI logo behind him"],
       ["them", "I am Inspector Vikram Sharma, CBI Mumbai. A FedEx parcel in your Aadhaar name has 5 passports and 200g MDMA."],
@@ -10,7 +10,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "trading", label: "📈 Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
+    id: "trading", names: { them: "Group admin", me: "Amma" }, label: "📈 Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
     chat: [
       ["them", "Welcome to SEBI-Registered Elite VIP Stock Group 🚀 Our mentor's IPO picks gave 312% last month."],
       ["them", "Your app dashboard shows profit ₹6,84,000. To withdraw, pay 30% 'tax clearance' first."],
@@ -19,7 +19,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "mum", label: "📱 \"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
+    id: "mum", names: { them: "New number", me: "Amma" }, label: "📱 \"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
     chat: [
       ["them", "Hi Mum, this is my new number, old phone fell in water 😭"],
       ["them", "Can you pay my hostel fees urgently? Deadline today. Send to my friend Priya's UPI, my bank app isn't working on this phone."],
@@ -28,7 +28,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "legit", label: "✅ Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false },
+    id: "legit", names: { them: "Ravi, son", me: "Amma", safe: true }, label: "✅ Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false },
     chat: [
       ["them", "Amma, BESCOM bill came ₹4,480. I paid last month, can you do this one? Sending you the bill photo."],
       ["me", "Ok kanna, I will send to your SBI UPI, same as always."],
@@ -36,7 +36,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "agent", label: "🤖 AI agent checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
+    id: "agent", names: { them: "Agent", me: "You", safe: false }, label: "🤖 AI agent checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
     chat: [
       ["me", "Agent task: buy an iPhone 17 under ₹95,000 from a trusted seller."],
       ["them", "🤖 Agent: Found 'Amazon Mega Diwali Deal' via an Instagram ad → redirected to amaz0n-deals-checkout.shop"],
@@ -58,10 +58,10 @@ function loadScenario(s) {
   for (const k of ["payeeName", "payeeId", "amount"]) $(k).value = s.payment[k];
   $("firstTime").checked = s.payment.firstTime;
   $("amtLabel").textContent = Number(s.payment.amount).toLocaleString("en-IN");
-  $("chat").innerHTML = s.chat.map(([who, t]) => `<div class="msg ${who}">${t}</div>`).join("");
+  $("chat").innerHTML = s.chat.map(([who, t]) => `<div class="msg ${who}${who === "them" && !s.names.safe ? " threat" : ""}" data-who="${s.names[who]}">${t}</div>`).join("");
   document.querySelectorAll(".scenarios button").forEach((b) => b.classList.toggle("on", b.dataset.id === s.id));
   $("result").className = "result empty";
-  $("result").innerHTML = "Press <b>Pay</b> to see Guardian decide.";
+  $("result").innerHTML = "Press Pay on the phone. Guardian reads everything on the left and decides before any money moves.";
 }
 
 $("scenarios").innerHTML = SCENARIOS.map((s) => `<button data-id="${s.id}">${s.label}</button>`).join("");
@@ -116,7 +116,7 @@ async function pay() {
   const context = current.chat.map(([who, t]) => `${who === "me" ? "PAYER" : "OTHER PARTY"}: ${t}`).join("\n");
   showPhone("checking");
   $("result").className = "result";
-  $("result").innerHTML = `<div class="spinner"></div><p>Asking the Decisions API…</p>`;
+  $("result").innerHTML = `<div class="spinner"></div><p>Reading the conversation and the payment…</p>`;
   try {
     const res = await fetch("/api/check", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -142,17 +142,24 @@ const LABELS = {
 const tone = (p) => (p >= 0.8 ? "bad" : p >= 0.35 ? "warn" : "ok");
 const bar = (label, p) => `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${tone(p)}" style="width:${pct(p)}"></div></div><b>${pct(p)}</b></div>`;
 
+const STAMP = { hold: "Held", warn: "Check", allow: "Clear" };
+const STAMP_SUB = { hold: "Payment paused until family approves", warn: "Payment needs a second look", allow: "Payment goes through" };
+
 function renderResult(item) {
   const types = (item.scamTypeProbabilities ?? []).filter((t) => t.probability >= 0.02).sort((a, b) => b.probability - a.probability).slice(0, 3);
+  const shots = images.length ? ` and ${images.length} screenshot${images.length > 1 ? "s" : ""}` : "";
   $("result").innerHTML = `
-    <div class="verdict ${item.verdict}">${{ hold: "⛔ HOLD — family approval needed", warn: "⚠️ WARN — double-check", allow: "✅ ALLOW" }[item.verdict]}</div>
-    <div class="big">${pct(item.probability)}<small> probability this is a scam</small></div>
+    <div class="verdict-row">
+      <div class="big">${pct(item.probability)}<small>chance this is a scam</small></div>
+      <span class="stamp land ${item.verdict}">${STAMP[item.verdict]}</span>
+    </div>
+    <p class="stamp-sub">${STAMP_SUB[item.verdict]}</p>
     ${item.signals.map((s) => bar(LABELS[s.name], s.probability)).join("")}
-    <h3>Pattern</h3>
+    <h3>Which scam it looks like</h3>
     ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability)).join("")}
     ${item.explanation ? `<div class="explain">${item.explanation}</div>` : ""}
-    <div class="meta">⚡ ${item.decisionsMs} ms · ${item.source === "decisions" ? "OpenAI Decisions API · gpt-6-luna" : "fallback"} · 6 questions, 1 call${images.length ? ` · ${images.length} screenshot(s)` : ""}</div>
-    <div class="policy">Policy: hold ≥ 80% · warn ≥ 35% · otherwise allow. Guardian only acts alone when it is confident.</div>`;
+    <p class="meta">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API (gpt-6-luna)" : "the fallback model"}: one call, six questions, the chat${shots}.</p>
+    <p class="policy">Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.</p>`;
 }
 
 function showPhone(state, item) {
@@ -160,8 +167,8 @@ function showPhone(state, item) {
   if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>Guardian is checking…</p></div>`;
   if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">✓</div><h3>Paid ₹${item.payment.amount.toLocaleString("en-IN")}</h3><p>to ${item.payment.payeeName}</p></div>`;
   if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">!</div><h3>Wait — this looks unusual</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">Cancel</button></div>`;
-  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">⛔</div><h3>Payment paused</h3><p>${item.explanation ?? ""}</p>
-      <div class="waiting" id="waiting">⏳ Asked your son <b>Rahul</b> to confirm…</div></div>`;
+  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">✋</div><h3>Payment paused</h3><p>${item.explanation ?? ""}</p>
+      <div class="waiting" id="waiting">We've asked your son Rahul to confirm. You'll see his answer here.</div></div>`;
   s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">↺ reset</button>`);
 }
 
@@ -169,8 +176,8 @@ function showPhone(state, item) {
 new EventSource("/api/events").onmessage = (e) => {
   const item = JSON.parse(e.data);
   if (item.id !== currentId || !$("waiting")) return;
-  if (item.status === "blocked") $("waiting").outerHTML = `<div class="waiting done bad">🛑 Rahul <b>blocked</b> this payment. Your money is safe.<br><small>Report: call 1930 or cybercrime.gov.in</small></div>`;
-  if (item.status === "approved") $("waiting").outerHTML = `<div class="waiting done ok">✅ Rahul approved. Payment sent.</div>`;
+  if (item.status === "blocked") $("waiting").outerHTML = `<div class="waiting done bad">Rahul blocked this payment. Your money is safe.<br><small>To report it, call 1930 or visit cybercrime.gov.in</small></div>`;
+  if (item.status === "approved") $("waiting").outerHTML = `<div class="waiting done ok">Rahul approved it. Payment sent.</div>`;
 };
 
 window.__reset = () => loadScenario(current);

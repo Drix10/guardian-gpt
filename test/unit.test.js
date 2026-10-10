@@ -150,3 +150,12 @@ test("validation only accepts image formats the Decisions API takes", () => {
   assert.equal(checkSchema.safeParse({ payment: pay(), images: ["data:image/webp;base64,AA"] }).success, true);
   assert.equal(checkSchema.safeParse({ payment: pay(), images: ["data:image/svg+xml;base64,AA"] }).success, false);
 });
+
+const { formatIssues } = await import("../src/validate.js");
+test("validation errors for the amount read like a person wrote them", () => {
+  const zero = checkSchema.safeParse({ payment: pay({ amount: 0 }) });
+  assert.equal(formatIssues(zero.error), "Enter an amount above ₹0.");
+  const text = checkSchema.safeParse({ payment: pay({ amount: "450000" }) });
+  assert.equal(formatIssues(text.error), "Enter the amount in rupees.");
+  assert.equal(formatIssues(checkSchema.safeParse({}).error), "Enter the payment details.");
+});

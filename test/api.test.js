@@ -100,12 +100,12 @@ test("MCP: tools are listed with the right safety annotations", async () => {
   assert.equal(byName.guardian_block_payment.annotations.destructiveHint, false);
   assert.equal(byName.guardian_approve_payment.annotations.destructiveHint, true);
   assert.equal(byName.guardian_payee_report.annotations.readOnlyHint, true);
-  assert.equal(byName.guardian_check._meta["openai/outputTemplate"], "ui://guardian/widget-v3.html");
+  assert.equal(byName.guardian_check._meta["openai/outputTemplate"], "ui://guardian/widget-v4.html");
 });
 
 test("MCP: widget resource is served (and cached)", async () => {
-  const a = await mcp("resources/read", { uri: "ui://guardian/widget-v3.html" });
-  const b = await mcp("resources/read", { uri: "ui://guardian/widget-v3.html" });
+  const a = await mcp("resources/read", { uri: "ui://guardian/widget-v4.html" });
+  const b = await mcp("resources/read", { uri: "ui://guardian/widget-v4.html" });
   assert.ok(a.result.contents[0].text.includes("<script type=\"module\">"));
   assert.equal(a.result.contents[0].text, b.result.contents[0].text);
 });
@@ -145,7 +145,7 @@ test("MCP: guardian_check rejects a missing or zero amount without calling the A
   for (const args of [{ context: "hi" }, { amount: 0 }]) {
     const r = await mcp("tools/call", { name: "guardian_check", arguments: args });
     assert.equal(r.result.isError, true);
-    assert.match(r.result.content[0].text, /valid payment/);
+    assert.match(r.result.content[0].text, /Guardian needs a valid payment. (Enter an amount above ₹0.|Enter the amount in rupees.)/);
   }
 });
 

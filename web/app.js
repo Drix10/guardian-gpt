@@ -194,7 +194,7 @@ async function pay() {
     });
     const item = await res.json().catch(() => ({}));
     if (token !== payToken) return;
-    if (!res.ok) throw new Error(item.error ?? `HTTP ${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(item.error ?? `HTTP ${res.status}`), { status: res.status });
     currentId = item.id;
     renderResult(item, shots.length);
     showPhone(item.verdict, item);
@@ -202,7 +202,9 @@ async function pay() {
     if (token !== payToken || err.name === "AbortError") return;
     restoreForm(payment);
     $("result").className = "result";
-    $("result").innerHTML = `<p class="error">Guardian couldn't decide: ${esc(err.message)}</p><p class="note">Your details are kept. Check that the server is running and OPENAI_API_KEY is set in .env, then press Pay again.</p>`;
+    $("result").innerHTML = err.status === 400
+      ? `<p class="error">${esc(err.message)}</p><p class="note">Fix that on the phone and press Pay again.</p>`
+      : `<p class="error">Guardian couldn't decide right now.</p><p class="note">${esc(err.message)} Your details are kept. Check that the server is running and OPENAI_API_KEY is set in .env, then press Pay again.</p>`;
   }
 }
 
@@ -215,6 +217,7 @@ const LABELS = {
 const tone = (p) => (p >= 0.8 ? "bad" : p >= 0.35 ? "warn" : "ok");
 const bar = (label, p, t = tone(p)) => `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${t}" style="width:${pct(p)}"></div></div><b>${pct(p)}</b></div>`;
 const inr = (n) => Number(n ?? 0).toLocaleString("en-IN");
+const patternName = (v) => (v === "unclear_pattern" ? "not clear from signals alone" : String(v ?? "").replaceAll("_", " "));
 
 // The stamp follows the payment's life: Held → Blocked / Approved.
 const STAMP = { hold: ["Held", "hold"], warn: ["Check", "warn"], allow: ["Clear", "allow"], blocked: ["Blocked", "hold"], approved: ["Approved", "allow"], expired: ["Expired", "warn"] };
@@ -222,7 +225,9 @@ const STAMP_SUB = {
   hold: "Payment paused until family approves", warn: "Payment needs a second look", allow: "Payment goes through",
   blocked: "Blocked by the family", approved: "Approved by the family", expired: "Nobody decided in time; the payment did not go through",
 };
-const decider = (by = "") => (/agent/i.test(by) ? "Rahul's assistant" : /chatgpt/i.test(by) ? "Rahul (in ChatGPT)" : "Rahul");
+// It is always Rahul's decision; say where he made it rather than guessing who pressed what.
+const decider = () => "Rahul";
+const decidedWhere = (by = "") => (/web/i.test(by) ? "on the family dashboard" : "in ChatGPT");
 const POLICY = {
   probability: "Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.",
   risk: "Held because the risk was rated high even though the probability is under 80%: Guardian errs on the side of a pause.",
@@ -241,7 +246,7 @@ function renderResult(item, nShots = 0) {
     <p class="stamp-sub" id="stampSub">${STAMP_SUB[item.verdict]}</p>
     ${(item.signals ?? []).map((s) => bar(LABELS[s.name] ?? s.name, s.probability)).join("")}
     <h3>Which scam it looks like</h3>
-    ${types.map((t) => bar(String(t.value).replaceAll("_", " "), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
+    ${types.map((t) => bar(patternName(t.value), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
     ${item.explanation ? `<div class="explain">${esc(item.explanation)}</div>` : ""}
     <p class="meta">Decided in ${item.decisionsMs} ms by ${by}: one call, six questions, ${current.chat.length ? "the chat and " : ""}the phone's signals${shots}.</p>
     <p class="policy">${item.verdict === "hold" && item.reason === "risk" ? POLICY.risk : POLICY.probability}</p>`;
@@ -259,7 +264,7 @@ const PHONE = {
     checking: "Guardian is checking…",
     paid: (p) => `Paid ₹${inr(p.amount)}`, to: (p) => `to ${esc(p.payeeName || p.payeeId)}`,
     warnTitle: "Wait, this looks unusual", cancel: "Cancel payment",
-    held: "Payment paused", onCall: "You're on a call with an unknown number. Real police never ask for money on a call. You can hang up.", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
+    held: "Payment paused", onCall: "You're on a call with an unknown number. You can hang up.", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
     blocked: (who) => `${who} blocked this payment. Your money is safe.`, report: "To report it, call 1930 or visit cybercrime.gov.in",
     approved: (who) => `${who} approved it. Payment sent.`, expired: "Nobody confirmed in time, so the money was not sent.", reset: "Start over",
   },
@@ -267,7 +272,7 @@ const PHONE = {
     checking: "Guardian जाँच कर रहा है…",
     paid: (p) => `₹${inr(p.amount)} का भुगतान हो गया`, to: (p) => `${esc(p.payeeName || p.payeeId)} को`,
     warnTitle: "रुकिए, यह असामान्य लग रहा है", cancel: "भुगतान रद्द करें",
-    held: "भुगतान रोका गया", onCall: "आप एक अनजान नंबर से कॉल पर हैं। असली पुलिस कभी कॉल पर पैसे नहीं माँगती। आप कॉल काट सकते हैं।", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
+    held: "भुगतान रोका गया", onCall: "आप एक अनजान नंबर से कॉल पर हैं। आप कॉल काट सकते हैं।", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
     blocked: () => "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
     approved: () => "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", expired: "समय पर किसी ने पुष्टि नहीं की, इसलिए पैसे नहीं भेजे गए।", reset: "फिर से शुरू करें",
   },
@@ -302,7 +307,7 @@ function applyDecision(item) {
   }
   if ($("verdictStamp")) {
     $("verdictStamp").outerHTML = stamp(item.status);
-    $("stampSub").textContent = item.status === "expired" ? STAMP_SUB.expired : `${STAMP_SUB[item.status]} (${who})`;
+    $("stampSub").textContent = item.status === "expired" ? STAMP_SUB.expired : `${STAMP_SUB[item.status]} (Rahul, ${decidedWhere(item.resolvedBy)})`;
   }
 }
 const stream = new EventSource("/api/events");

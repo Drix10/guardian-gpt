@@ -25,10 +25,10 @@ const pct = (p) => `${Math.round((p ?? 0) * 100)}%`;
 // The stamp follows the payment's life: Held → Blocked / Approved.
 const stampFor = (i) => i.status === "blocked" ? ["Blocked", "hold"] : i.status === "approved" ? ["Approved", "allow"] : i.status === "expired" ? ["Expired", "warn"]
   : [{ hold: "Held", warn: "Check", allow: "Clear" }[i.verdict] ?? "Check", i.verdict ?? "warn"];
-const decider = (by = "") => (/agent/i.test(by) ? "Your assistant" : /chatgpt/i.test(by) ? "You (in ChatGPT)" : "You");
+const where = (by = "") => (/web/i.test(by) ? "" : " in ChatGPT");
 const STATUS = {
-  approved: (i) => `${decider(i.resolvedBy)} approved this payment`,
-  blocked: (i) => `${decider(i.resolvedBy)} blocked this payment`,
+  approved: (i) => `You approved this payment${where(i.resolvedBy)}`,
+  blocked: (i) => `You blocked this payment${where(i.resolvedBy)}`,
   expired: () => "Nobody decided in time, so it did not go through",
   warned: () => "Amma was warned before paying",
   allowed: () => "Went through normally",
@@ -44,7 +44,7 @@ function render() {
     <article class="card">
       <span class="stamp ${stampFor(i)[1]}">${stampFor(i)[0]}</span>
       <div class="who">₹${Number(i.payment?.amount ?? 0).toLocaleString("en-IN")} to ${esc(i.payment?.payeeName || i.payment?.payeeId)}
-        <small>${esc(i.payment?.payeeId)}, ${pct(i.probability)} chance of a scam (${esc(String(i.scamType ?? "").replaceAll("_", " "))})</small>
+        <small>${esc(i.payment?.payeeId)}, ${pct(i.probability)} chance of a scam (${esc(i.scamType === "unclear_pattern" ? "pattern not clear from signals alone" : String(i.scamType ?? "").replaceAll("_", " "))})</small>
         ${i.payment?.actor && i.payment.actor !== "ChatGPT user" ? `<small>Started by: ${esc(i.payment.actor)}</small>` : ""}</div>
       ${i.explanation ? `<div class="explain">${esc(i.explanation)}</div>` : ""}
       ${i.status === "awaiting_family"

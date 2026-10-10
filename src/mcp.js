@@ -10,7 +10,7 @@ import * as store from "./store.js";
 import { checkLimiter } from "./limits.js";
 import { paymentSchema, situationSchema, formatIssues } from "./validate.js";
 
-const WIDGET_URI = "ui://guardian/widget-v3.html"; // bump whenever ui/ changes: ChatGPT caches by URI
+const WIDGET_URI = "ui://guardian/widget-v4.html"; // bump whenever ui/ changes: ChatGPT caches by URI
 const ROOT = path.resolve(import.meta.dirname, "..");
 
 let widgetCache = null;
@@ -87,7 +87,7 @@ function buildServer(limiter, origin) {
     const payment = paymentSchema.safeParse({
       amount: args.amount, payeeName: args.payee_name, payeeId: args.payee_id, firstTime: args.first_time ?? true, actor: args.actor ?? "ChatGPT user",
     });
-    if (!payment.success) return toolError(`Guardian needs a valid payment: ${formatIssues(payment.error)}. Ask for the amount in rupees.`);
+    if (!payment.success) return toolError(`Guardian needs a valid payment. ${formatIssues(payment.error)} Ask the person for the amount in rupees.`);
     const signals = hasSituation ? situationSchema.safeParse(situation) : { success: true, data: null };
     if (!signals.success) return toolError(`Invalid phone/payment signals: ${formatIssues(signals.error)}`);
     if (!limiter(origin)) return toolError("Guardian is receiving too many checks right now. Try again in a minute.");

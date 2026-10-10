@@ -17,7 +17,7 @@ export const situationSchema = z.object({
 }).strict();
 
 export const paymentSchema = z.object({
-  amount: z.number().finite().positive().max(1e10),
+  amount: z.number("Enter the amount in rupees.").finite("Enter the amount in rupees.").positive("Enter an amount above ₹0.").max(1e10, "That amount is too large."),
   payeeName: text(200).optional(),
   payeeId: text(200).optional(),
   firstTime: z.boolean().optional(),
@@ -41,6 +41,11 @@ export const decisionSchema = z.object({
   by: text(80).optional(),
 });
 
+// Messages written for people are shown as-is; anything else gets its field name for context.
+const FRIENDLY_PATHS = new Set(["payment.amount", "amount", "payment"]);
 export function formatIssues(error) {
-  return error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; ");
+  return [...new Set(error.issues.map((i) => {
+    const path = i.path.join(".");
+    return FRIENDLY_PATHS.has(path) || !path ? (path === "payment" ? "Enter the payment details." : i.message) : `${path}: ${i.message}`;
+  }))].join(" ");
 }

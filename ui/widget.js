@@ -12,11 +12,11 @@ const LABELS = {
   pressure_or_secrecy: "Threats, rush or secrecy",
   payee_mismatch: "Payee doesn't fit the story",
 };
-const decider = (by = "") => (/agent/i.test(by) ? "Your assistant" : /web/i.test(by) ? "You (on the dashboard)" : "You");
+const where = (by = "") => (/web/i.test(by) ? " on the family dashboard" : "");
 const STATUS = {
   awaiting_family: () => "Waiting for your decision",
-  approved: (i) => `${decider(i.resolvedBy)} approved this payment`,
-  blocked: (i) => `${decider(i.resolvedBy)} blocked this payment`,
+  approved: (i) => `You approved this payment${where(i.resolvedBy)}`,
+  blocked: (i) => `You blocked this payment${where(i.resolvedBy)}`,
   expired: () => "Nobody decided in time, so it did not go through",
   warned: () => "The payer was warned",
   allowed: () => "Went through normally",
@@ -42,7 +42,7 @@ function verdictCard(item) {
     <span class="g-stamp ${tone}">${word}</span>
     <div class="g-amt">₹${inr(p.amount)} to ${esc(p.payeeName ?? p.payeeId ?? "unknown")}</div>
     <div class="g-sub">${esc(p.payeeId ?? "")}</div>
-    <div class="g-big">${pct(item.probability)}<small>chance this is a scam (${esc(String(item.scamType ?? "").replaceAll("_", " "))})</small></div>
+    <div class="g-big">${pct(item.probability)}<small>chance this is a scam (${esc(item.scamType === "unclear_pattern" ? "pattern not clear from signals alone" : String(item.scamType ?? "").replaceAll("_", " "))})</small></div>
     ${(item.signals ?? []).map((s) => bar(LABELS[s.name] ?? s.name, s.probability)).join("")}
     ${item.explanation ? `<p class="g-explain">${esc(item.explanation)}</p>` : ""}
     <div class="g-foot">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API" : "the fallback model"}</div>

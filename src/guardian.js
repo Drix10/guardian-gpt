@@ -34,7 +34,7 @@ export const THRESHOLDS = { hold: 0.8, warn: 0.35 };
 export function buildInput({ payment = {}, context = "", images = [] }) {
   const lines = [
     "A PAYMENT IS ABOUT TO BE MADE.",
-    `Amount: ₹${payment.amount ?? "?"}`,
+    `Amount: ₹${payment.amount == null ? "?" : Number(payment.amount).toLocaleString("en-IN")}`,
     `Payee name shown: ${payment.payeeName ?? "unknown"}`,
     `Payee UPI ID / account / site: ${payment.payeeId ?? "unknown"}`,
     `First payment to this payee: ${payment.firstTime ? "yes" : "no"}`,
@@ -85,10 +85,11 @@ async function explain(result, context, language) {
       instructions:
         `You are Guardian, protecting an elderly person from payment scams. In ${LANGS[language] ?? LANGS.en}, ` +
         "write at most 3 short sentences: why this payment was paused, and exactly what to do now. " +
-        "Warm, calm, no jargon. Never tell them they are stupid. Real police never ask for money on a call.",
+        "Warm, calm, no jargon. Never tell them they are stupid. Real police never ask for money on a call. " +
+        "Write rupee amounts in the Indian format exactly as given (for example ₹4,50,000).",
       input:
         `Verdict: ${result.verdict}. Scam pattern: ${result.scamType}. Red flags: ${flags}. ` +
-        `Payment: ₹${result.payment?.amount} to ${result.payment?.payeeName} (${result.payment?.payeeId}).\nContext:\n${context}`.slice(0, 4000),
+        `Payment: ₹${Number(result.payment?.amount ?? 0).toLocaleString("en-IN")} to ${result.payment?.payeeName} (${result.payment?.payeeId}).\nContext:\n${context}`.slice(0, 4000),
     });
     return res.output_text.trim();
   } catch (err) {

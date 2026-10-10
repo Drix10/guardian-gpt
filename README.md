@@ -87,7 +87,7 @@ flowchart LR
 | 🚔 "CBI" digital arrest on a video call, ₹4,50,000 | ⛔ **Hold**, 100%, *digital arrest* |
 | 📈 Fake "SEBI-registered" trading group asking for a "tax" to withdraw profits | ⛔ **Hold**, 100%, *investment/trading* |
 | 📱 "Hi Mum, new number, pay my fees to my friend's UPI" | ⛔ **Hold**, 98%, *family impersonation* |
-| ✅ Son asks Amma to pay the BESCOM electricity bill to his usual UPI ID | ✅ **Allow**, 11% |
+| ✅ Son asks Amma to send the BESCOM bill money to his usual UPI ID | ✅ **Allow**, 5% |
 | 🤖 An AI shopping agent lured from an Instagram ad to `amaz0n-deals-checkout.shop` | ⛔ **Hold**, 99%, *agent checkout fraud* |
 
 ---
@@ -258,7 +258,7 @@ the phone shows *"Rahul blocked this payment. Your money is safe."* Then try **�
 
 AI agents now browse and pay on our behalf, and lookalike shops work on them too. Guardian sits in front of them the same way it sits in front of people.
 
-`scripts/agent-demo.js` starts an **OpenAI-hosted shopping agent** (Agents API, `gpt-6-astra`) whose only payment rule is:
+`scripts/agent-demo.js` starts an **OpenAI-hosted shopping agent** (Agents API, `gpt-6-luna`) whose only payment rule is:
 *call Guardian first, and never pay on HOLD or WARN.* The agent reaches Guardian through the **same MCP server ChatGPT uses**.
 
 ```bash
@@ -266,18 +266,18 @@ npm run agent-demo -- https://<random>.trycloudflare.com/mcp
 ```
 
 ```
-🤖 Shopping agent (gpt-6-astra, OpenAI Agents API) starting…
+🤖 Shopping agent (gpt-6-luna, OpenAI Agents API) starting…
 → Agent asks Guardian before paying…
 ← Guardian: HOLD · 99% scam · agent checkout fraud
 
-🤖 Agent's final message (31.4 s):
-Lakshmi, I have not paid. Guardian placed this purchase on HOLD: the six-day-old website impersonates Amazon,
-pressures you with a countdown, and demands UPI payment to an unverified address. Your son Rahul has been asked to review it.
+🤖 Agent's final message (23.6 s):
+I did not purchase it. Guardian returned HOLD with a 99% scam probability: the site mimics Amazon, uses a countdown,
+and directs payment to a mismatched UPI ID. Lakshmi's son Rahul has been asked to review it.
 ```
 
 The held payment appears instantly on the family dashboard, marked *Started by: AI shopping agent on behalf of Lakshmi*.
 
-> Astra is used here only because the Agents API requires it. Every decision is still made by the Decisions API on `gpt-6-luna`.
+> The agent itself runs on `gpt-6-luna` (set `AGENT_MODEL` to change it); every payment decision is still made by the Decisions API.
 
 ---
 
@@ -360,7 +360,7 @@ guardian-gpt/
 
 - **Decisions API:** $0.10 per 1M input tokens, **$0 for output**. A typical text-only check is ~300–750 input tokens, so it costs **well under $0.0001**: cheap enough to run on every payment.
 - **GPT-6.1 Sol:** called **only** for warn/hold verdicts, to write the explanation.
-- **No large reasoning model sits in the decision path.** Big models are reserved for jobs that need them: `gpt-6-astra` only runs in the optional agent demo, because the Agents API requires it.
+- **No large reasoning model anywhere.** Decisions and the agent demo run on `gpt-6-luna`; only explanations use `gpt-6.1-sol`.
 
 ---
 

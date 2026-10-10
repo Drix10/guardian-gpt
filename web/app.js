@@ -1,8 +1,8 @@
 const SCENARIOS = [
   {
-    id: "arrest", names: { them: "Caller", me: "Amma" }, label: "🚔 Digital arrest", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
+    id: "arrest", names: { them: "Caller", me: "Amma" }, label: "Digital arrest call", payment: { payeeName: "RBI Verification Cell", payeeId: "rbi.verify2291@okaxis", amount: 450000, firstTime: true },
     chat: [
-      ["them", "📹 WhatsApp video call · +91 98XXX XXX21 · man in police uniform, CBI logo behind him"],
+      ["sys", "WhatsApp video call from +91 98XXX XXX21. A man in police uniform, CBI logo on the wall behind him."],
       ["them", "I am Inspector Vikram Sharma, CBI Mumbai. A FedEx parcel in your Aadhaar name has 5 passports and 200g MDMA."],
       ["them", "You are under DIGITAL ARREST. Do not disconnect this call. Do not tell your son or anyone, it will compromise the investigation."],
       ["me", "Sir I have done nothing, please help me 🙏"],
@@ -10,7 +10,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "trading", names: { them: "Group admin", me: "Amma" }, label: "📈 Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
+    id: "trading", names: { them: "Group admin", me: "Amma" }, label: "Fake trading group", payment: { payeeName: "Elite Capital VIP Desk", payeeId: "elitecap.desk@ybl", amount: 200000, firstTime: true },
     chat: [
       ["them", "Welcome to SEBI-Registered Elite VIP Stock Group 🚀 Our mentor's IPO picks gave 312% last month."],
       ["them", "Your app dashboard shows profit ₹6,84,000. To withdraw, pay 30% 'tax clearance' first."],
@@ -19,7 +19,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "mum", names: { them: "New number", me: "Amma" }, label: "📱 \"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
+    id: "mum", names: { them: "New number", me: "Amma" }, label: "\"Hi Mum, new number\"", payment: { payeeName: "Priya S", payeeId: "priya.help22@paytm", amount: 38000, firstTime: true },
     chat: [
       ["them", "Hi Mum, this is my new number, old phone fell in water 😭"],
       ["them", "Can you pay my hostel fees urgently? Deadline today. Send to my friend Priya's UPI, my bank app isn't working on this phone."],
@@ -28,7 +28,7 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "legit", names: { them: "Ravi, son", me: "Amma", safe: true }, label: "✅ Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false },
+    id: "legit", names: { them: "Ravi, son", me: "Amma", safe: true }, label: "Son's electricity bill", payment: { payeeName: "Ravi Kumar", payeeId: "ravi.kumar@oksbi", amount: 4500, firstTime: false, note: "BESCOM bill money for Ravi (my son)" },
     chat: [
       ["them", "Amma, the BESCOM bill came, ₹4,480. Can you send me ₹4,500 on my SBI UPI? I'll pay it from my app tonight like every month."],
       ["me", "Ok kanna, sending to your usual UPI now."],
@@ -36,11 +36,11 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "agent", names: { them: "Agent", me: "You", safe: false }, label: "🤖 AI agent checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
+    id: "agent", names: { them: "Agent", me: "You", safe: false }, label: "AI agent at checkout", payment: { payeeName: "Amazon Deals Checkout", payeeId: "amaz0n-deals-checkout.shop", amount: 89999, firstTime: true, actor: "AI shopping agent (on behalf of user)" },
     chat: [
       ["me", "Agent task: buy an iPhone 17 under ₹95,000 from a trusted seller."],
-      ["them", "🤖 Agent: Found 'Amazon Mega Diwali Deal' via an Instagram ad → redirected to amaz0n-deals-checkout.shop"],
-      ["them", "🤖 Agent: Page says 'Only 2 left! Offer ends in 04:59'. Payment page asks for direct UPI transfer, no card/COD options."],
+      ["them", "Found 'Amazon Mega Diwali Deal' through an Instagram ad. The link opened amaz0n-deals-checkout.shop."],
+      ["them", "Page says 'Only 2 left! Offer ends in 04:59'. Checkout only accepts a direct UPI transfer: no card, no cash on delivery."],
     ],
   },
 ];
@@ -58,13 +58,15 @@ function loadScenario(s) {
   for (const k of ["payeeName", "payeeId", "amount"]) $(k).value = s.payment[k];
   $("firstTime").checked = s.payment.firstTime;
   $("amtLabel").textContent = Number(s.payment.amount).toLocaleString("en-IN");
-  $("chat").innerHTML = s.chat.map(([who, t]) => `<div class="msg ${who}${who === "them" && !s.names.safe ? " threat" : ""}" data-who="${s.names[who]}">${t}</div>`).join("");
-  document.querySelectorAll(".scenarios button").forEach((b) => b.classList.toggle("on", b.dataset.id === s.id));
+  $("chat").innerHTML = s.chat.map(([who, t]) => who === "sys"
+    ? `<div class="sys">${t}</div>`
+    : `<div class="msg ${who}${who === "them" && !s.names.safe ? " threat" : ""}" data-who="${s.names[who]}">${t}</div>`).join("");
+  document.querySelectorAll("#scenarios button").forEach((b) => b.classList.toggle("on", b.dataset.id === s.id));
   $("result").className = "result empty";
   $("result").innerHTML = "Press Pay on the phone. Guardian reads everything on the left and decides before any money moves.";
 }
 
-$("scenarios").innerHTML = SCENARIOS.map((s) => `<button data-id="${s.id}">${s.label}</button>`).join("");
+$("scenarios").innerHTML = SCENARIOS.map((s) => `<li><button data-id="${s.id}"><span>${s.label}</span><span class="amt">₹${Number(s.payment.amount).toLocaleString("en-IN")}</span></button></li>`).join("");
 $("scenarios").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (b) loadScenario(SCENARIOS.find((s) => s.id === b.dataset.id));
@@ -93,9 +95,11 @@ function downscale(file, max = 1024) {
 
 // The phone screen is re-rendered often, so listen on the container (event delegation).
 const PHONE_FORM = $("screen").innerHTML;
+const STATUS_BAR = `<div class="statusbar"><span>9:41</span><span>5G&nbsp;&nbsp;82%</span></div>`;
 let language = "en";
 function resetPhone() {
-  $("screen").innerHTML = PHONE_FORM;
+  $("screen").dataset.state = "form";
+  $("screen").innerHTML = STATUS_BAR + PHONE_FORM;
   $("language").value = language;
 }
 $("screen").addEventListener("click", (e) => {
@@ -111,7 +115,7 @@ $("screen").addEventListener("change", (e) => {
 async function pay() {
   const payment = {
     payeeName: $("payeeName").value, payeeId: $("payeeId").value, amount: Number($("amount").value),
-    firstTime: $("firstTime").checked, actor: current.payment.actor,
+    firstTime: $("firstTime").checked, actor: current.payment.actor, note: current.payment.note,
   };
   const context = current.chat.map(([who, t]) => `${who === "me" ? "PAYER" : "OTHER PARTY"}: ${t}`).join("\n");
   phoneLang = language;
@@ -141,7 +145,7 @@ const LABELS = {
   payee_mismatch: "Payee doesn't fit the story",
 };
 const tone = (p) => (p >= 0.8 ? "bad" : p >= 0.35 ? "warn" : "ok");
-const bar = (label, p) => `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${tone(p)}" style="width:${pct(p)}"></div></div><b>${pct(p)}</b></div>`;
+const bar = (label, p, t = tone(p)) => `<div class="bar"><span>${label}</span><div class="track"><div class="fill ${t}" style="width:${pct(p)}"></div></div><b>${pct(p)}</b></div>`;
 const inr = (n) => Number(n ?? 0).toLocaleString("en-IN");
 
 // The stamp follows the payment's life: Held → Blocked / Approved.
@@ -163,11 +167,17 @@ function renderResult(item) {
     <p class="stamp-sub" id="stampSub">${STAMP_SUB[item.verdict]}</p>
     ${item.signals.map((s) => bar(LABELS[s.name], s.probability)).join("")}
     <h3>Which scam it looks like</h3>
-    ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability)).join("")}
+    ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
     ${item.explanation ? `<div class="explain">${item.explanation}</div>` : ""}
     <p class="meta">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API (gpt-6-luna)" : "the fallback model"}: one call, six questions, the chat${shots}.</p>
     <p class="policy">Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.</p>`;
 }
+
+const ICON = {
+  ok: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="3"/><path d="M14 25l7 7 13-15" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  hold: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="3"/><path d="M19 15v18M29 15v18" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
+  warn: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5L45 42H3z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M24 18v12" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="36" r="2.2" fill="currentColor"/></svg>',
+};
 
 // Phone copy follows the language the payer chose.
 const PHONE = {
@@ -177,7 +187,7 @@ const PHONE = {
     warnTitle: "Wait, this looks unusual", cancel: "Cancel payment",
     held: "Payment paused", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
     blocked: "Rahul blocked this payment. Your money is safe.", report: "To report it, call 1930 or visit cybercrime.gov.in",
-    approved: "Rahul approved it. Payment sent.", reset: "↺ reset",
+    approved: "Rahul approved it. Payment sent.", reset: "Start over",
   },
   hi: {
     checking: "Guardian जाँच कर रहा है…",
@@ -185,19 +195,22 @@ const PHONE = {
     warnTitle: "रुकिए, यह असामान्य लग रहा है", cancel: "भुगतान रद्द करें",
     held: "भुगतान रोका गया", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
     blocked: "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
-    approved: "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", reset: "↺ फिर से",
+    approved: "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", reset: "फिर से शुरू करें",
   },
 };
 let phoneLang = "en";
 
 function showPhone(state, item) {
   const s = $("screen");
+  s.dataset.state = state;
+  const bar = STATUS_BAR;
   const t = PHONE[phoneLang] ?? PHONE.en;
   if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>${t.checking}</p></div>`;
-  if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">✓</div><h3>${t.paid(item.payment)}</h3><p>${t.to(item.payment)}</p></div>`;
-  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">!</div><h3>${t.warnTitle}</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
-  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">✋</div><h3>${t.held}</h3><p>${item.explanation ?? ""}</p>
+  if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">${ICON.ok}</div><h3>${t.paid(item.payment)}</h3><p>${t.to(item.payment)}</p></div>`;
+  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">${ICON.warn}</div><h3>${t.warnTitle}</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
+  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">${ICON.hold}</div><h3>${t.held}</h3><p>${item.explanation ?? ""}</p>
       <div class="waiting" id="waiting">${t.waiting}</div></div>`;
+  s.insertAdjacentHTML("afterbegin", bar);
   s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">${t.reset}</button>`);
 }
 

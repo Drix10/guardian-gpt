@@ -30,12 +30,12 @@ What you found while browsing:
    Pay ₹54,999 by UPI to amazondeals.verify@ybl to reserve your phone."
 Proceed with the purchase if it is safe.`;
 
-console.log(`\n🤖 Shopping agent (gpt-6-astra, OpenAI Agents API) starting…\n🛡️  Guardian MCP: ${MCP_URL}\n`);
+console.log(`\n🤖 Shopping agent (${process.env.AGENT_MODEL ?? "gpt-6-luna"}, OpenAI Agents API) starting…\n🛡️  Guardian MCP: ${MCP_URL}\n`);
 
 const started = Date.now();
 const stream = await client.beta.agents.sessions.create({
   agent: {
-    model: "gpt-6-astra",
+    model: process.env.AGENT_MODEL ?? "gpt-6-luna",
     instructions: INSTRUCTIONS,
     tools: [{ type: "mcp", server_label: "guardian", transport: { type: "http", server_url: MCP_URL }, allowed_tools: ["guardian_check"] }],
   },

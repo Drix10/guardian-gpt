@@ -19,11 +19,11 @@
   <!-- Left: what happened before the payment -->
   <section class="panel">
     <h2>What happened before the payment</h2>
-    <div class="scenarios" id="scenarios"></div>
+    <ul class="cases" id="scenarios" aria-label="Scenarios"></ul>
     <div class="chat" id="chat"></div>
-    <label class="drop" id="drop">
+    <label class="attach" id="drop">
       <input type="file" id="file" accept="image/*" multiple hidden>
-      <span>Attach screenshots of the call, chat or payment page</span>
+      <span>Attach screenshots</span>
     </label>
     <div class="thumbs" id="thumbs"></div>
   </section>
@@ -32,7 +32,7 @@
   <section class="phone">
     <div class="screen" id="screen">
       <div class="pay">
-        <div class="pay-h">PayNow · UPI</div>
+        <div class="pay-h">PayNow <small>UPI</small></div>
         <label>Paying to<input id="payeeName"></label>
         <label>UPI ID / site<input id="payeeId"></label>
         <label>Amount (₹)<input id="amount" type="number"></label>

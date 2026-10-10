@@ -8,7 +8,7 @@ import { OpenAIExtensions } from "@openai/mcp-extensions/server";
 import { assess } from "./guardian.js";
 import * as store from "./store.js";
 
-const WIDGET_URI = "ui://guardian/widget-v1.html";
+const WIDGET_URI = "ui://guardian/widget-v2.html";
 const ROOT = path.resolve(import.meta.dirname, "..");
 
 function widgetHtml() {
@@ -43,7 +43,8 @@ function buildServer() {
     description:
       "Use BEFORE anyone sends money when a message, call, or request asks for a payment, OTP, refund, investment, or 'verification'. " +
       "Pass the conversation text and payment details. Returns a calibrated scam probability, the scam pattern, and allow/warn/hold. " +
-      "Held payments are sent to the family member for approval.",
+      "A HOLD means the payment is paused (not blocked) and waiting for the family member to block or approve it in the Guardian card. " +
+      "Describe it as held/paused, never as blocked, unless the family has blocked it.",
     inputSchema: {
       context: z.string().describe("The messages, call transcript, or description of what happened before the payment"),
       amount: z.number().optional().describe("Amount in INR"),
@@ -53,7 +54,7 @@ function buildServer() {
       language: z.enum(["en", "hi"]).optional().describe("Language for the explanation"),
       actor: z.string().optional().describe("Who is making the payment, e.g. 'AI shopping agent on behalf of Lakshmi'"),
     },
-    _meta: { ui: { resourceUri: WIDGET_URI } },
+    _meta: { ui: { resourceUri: WIDGET_URI }, "openai/outputTemplate": WIDGET_URI },
   }, async (args) => {
     const result = await assess({
       payment: { amount: args.amount, payeeName: args.payee_name, payeeId: args.payee_id, firstTime: args.first_time ?? true, actor: args.actor ?? "ChatGPT user" },
@@ -63,7 +64,9 @@ function buildServer() {
     const item = store.record(result);
     return {
       structuredContent: { kind: "verdict", item },
-      content: [{ type: "text", text: `Guardian verdict: ${item.verdict.toUpperCase()} (scam probability ${(item.probability * 100).toFixed(0)}%, pattern ${item.scamType}). ${item.explanation ?? ""}` }],
+      content: [{ type: "text", text: `Guardian verdict: ${item.verdict.toUpperCase()} (scam probability ${(item.probability * 100).toFixed(0)}%, pattern ${item.scamType}). ` +
+        (item.verdict === "hold" ? "The payment is PAUSED, not blocked: it is waiting for the family to block or approve it in the Guardian card. " : "") +
+        `Amount: ₹${Number(item.payment.amount ?? 0).toLocaleString("en-IN")}. ${item.explanation ?? ""}` }],
     };
   });
 
@@ -73,6 +76,7 @@ function buildServer() {
     inputSchema: {},
     _meta: {
       ui: { resourceUri: WIDGET_URI },
+      "openai/outputTemplate": WIDGET_URI,
       "openai/ui": { entrypoints: [{ type: "global" }, { type: "thread" }] },
     },
   }, async () => ({
@@ -84,7 +88,7 @@ function buildServer() {
     title: "Approve or block a held payment",
     description: "Approve or block a payment that Guardian held for family review.",
     inputSchema: { id: z.string(), decision: z.enum(["approve", "block"]) },
-    _meta: { ui: { resourceUri: WIDGET_URI, visibility: ["model", "app"] } },
+    _meta: { ui: { resourceUri: WIDGET_URI, visibility: ["model", "app"] }, "openai/outputTemplate": WIDGET_URI },
   }, async ({ id, decision }) => {
     const item = store.resolve(id, decision, "family (ChatGPT)");
     return {

@@ -176,3 +176,4 @@ td.allow { color: var(--ledger); font-weight: 700; }
 .none-typed { font-family: var(--display); font-size: 22px; margin: 6px 0 14px; }
 .chat[hidden] { display: none; }
 .ph p.oncall { font-weight: 700; }
+.error { color: var(--stamp); font-weight: 700; }

@@ -12,18 +12,20 @@ allow / warn / hold verdict. Held payments go to a family member for approval in
 ## Model budget (important)
 - All classification: Decisions API, `gpt-6-luna` (cheap, ~0.2s).
 - Explanations / text generation: `gpt-6.1-sol`, only for warn/hold verdicts.
-- `gpt-6-astra`: only for the Agents API computer-use demo (required there). Never use Ultrafast.
+- Agents API demo: `gpt-6-luna`. Never use Ultrafast; avoid `gpt-6-astra`.
 
 ## Layout
-- `src/decide.js` — Decisions API wrapper + Structured Outputs fallback.
-- `src/guardian.js` — question set, thresholds, verdict policy, explanation.
-- `src/store.js` — in-memory held payments + live event stream.
-- `src/mcp.js` — MCP tools + widget resource (ChatGPT plugin).
-- `src/server.js` — Express: REST API, SSE, static web demo, `/mcp`.
-- `ui/` — widget source (bundled to `dist/`). `web/` — demo payment app + family dashboard.
-- `data/eval.jsonl` + `scripts/eval.js` — labeled eval set and calibration report.
+- `src/decide.js` — Decisions API wrapper; rejects incomplete answers; Structured Outputs fallback; cautious default (never fails open).
+- `src/guardian.js` — question set, `verdictFor` (the single verdict rule), automatic phone/payment signals, explanations.
+- `src/validate.js` — zod schemas for every input. `src/limits.js` — local vs remote rate limits.
+- `src/store.js` — bounded in-memory payments; only waiting payments can be decided. `src/notify.js` — payment_held webhook.
+- `src/mcp.js` — MCP tools + ChatGPT widget resource (bump WIDGET_URI whenever ui/ changes).
+- `src/app.js` — Express app (localhost-only except /mcp); `src/server.js` just listens.
+- `ui/` — widget source (bundled to `dist/`). `web/` — demo payment app, family dashboard, accuracy page.
+- `test/` — `npm test` (no API calls), `npm run test:live`. `data/eval.jsonl` + `scripts/eval.js` — labelled eval.
 
 ## Conventions
 - Keep functions small; no frameworks on the web pages (plain HTML/CSS/JS).
 - Never log API keys. Load secrets from `.env` via dotenv.
-- Run `npm run build` (widget) and `npm start` (server on :8787).
+- Run `npm run build` (widget) and `npm start` (server on :8787). Run `npm test` before every commit.
+- Escape all dynamic text before putting it in HTML. Never default a missing model answer to "allow".

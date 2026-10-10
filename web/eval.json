@@ -22,8 +22,8 @@
     "wronglyHeld": 0
   },
   "latencyMs": {
-    "median": 184,
-    "p95": 285
+    "median": 170,
+    "p95": 291
   },
   "costPerCheckUsd": null,
   "reliability": [
@@ -61,7 +61,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 243,
+      "ms": 291,
       "source": "decisions",
       "typed": true
     },
@@ -72,7 +72,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 285,
+      "ms": 250,
       "source": "decisions",
       "typed": true
     },
@@ -83,7 +83,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "digital_arrest",
-      "ms": 243,
+      "ms": 265,
       "source": "decisions",
       "typed": true
     },
@@ -94,7 +94,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "investment_trading",
-      "ms": 303,
+      "ms": 263,
       "source": "decisions",
       "typed": true
     },
@@ -105,7 +105,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "investment_trading",
-      "ms": 280,
+      "ms": 290,
       "source": "decisions",
       "typed": true
     },
@@ -116,7 +116,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "romance_or_job",
-      "ms": 260,
+      "ms": 274,
       "source": "decisions",
       "typed": true
     },
@@ -127,7 +127,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "kyc_phishing",
-      "ms": 250,
+      "ms": 245,
       "source": "decisions",
       "typed": true
     },
@@ -138,7 +138,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "kyc_phishing",
-      "ms": 275,
+      "ms": 286,
       "source": "decisions",
       "typed": true
     },
@@ -149,7 +149,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "refund_collect_request",
-      "ms": 140,
+      "ms": 170,
       "source": "decisions",
       "typed": true
     },
@@ -160,7 +160,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "refund_collect_request",
-      "ms": 184,
+      "ms": 140,
       "source": "decisions",
       "typed": true
     },
@@ -171,7 +171,7 @@
       "probability": 0.98,
       "verdict": "hold",
       "scam_type_pred": "family_impersonation",
-      "ms": 184,
+      "ms": 165,
       "source": "decisions",
       "typed": true
     },
@@ -182,7 +182,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "unclear_pattern",
-      "ms": 143,
+      "ms": 151,
       "source": "decisions",
       "typed": true
     },
@@ -193,7 +193,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "romance_or_job",
-      "ms": 188,
+      "ms": 142,
       "source": "decisions",
       "typed": true
     },
@@ -204,7 +204,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "romance_or_job",
-      "ms": 184,
+      "ms": 170,
       "source": "decisions",
       "typed": true
     },
@@ -215,7 +215,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "agent_checkout_fraud",
-      "ms": 198,
+      "ms": 174,
       "source": "decisions",
       "typed": true
     },
@@ -226,7 +226,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 219,
+      "ms": 149,
       "source": "decisions",
       "typed": true
     },
@@ -237,7 +237,7 @@
       "probability": 0.04,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 153,
+      "ms": 246,
       "source": "decisions",
       "typed": true
     },
@@ -248,7 +248,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 152,
+      "ms": 149,
       "source": "decisions",
       "typed": true
     },
@@ -259,7 +259,7 @@
       "probability": 0.06,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 119,
+      "ms": 147,
       "source": "decisions",
       "typed": true
     },
@@ -270,7 +270,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 169,
+      "ms": 237,
       "source": "decisions",
       "typed": true
     },
@@ -281,7 +281,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 265,
+      "ms": 167,
       "source": "decisions",
       "typed": true
     },
@@ -292,7 +292,7 @@
       "probability": 0.03,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 124,
+      "ms": 140,
       "source": "decisions",
       "typed": true
     },
@@ -303,7 +303,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 153,
+      "ms": 130,
       "source": "decisions",
       "typed": true
     },
@@ -314,7 +314,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 260,
+      "ms": 204,
       "source": "decisions",
       "typed": true
     },
@@ -325,7 +325,7 @@
       "probability": 0.02,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 186,
+      "ms": 169,
       "source": "decisions",
       "typed": true
     },
@@ -336,7 +336,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 200,
+      "ms": 370,
       "source": "decisions",
       "typed": true
     },
@@ -347,7 +347,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 158,
+      "ms": 252,
       "source": "decisions",
       "typed": true
     },
@@ -358,7 +358,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 154,
+      "ms": 177,
       "source": "decisions",
       "typed": true
     },
@@ -369,7 +369,7 @@
       "probability": 0.13,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 199,
+      "ms": 170,
       "source": "decisions",
       "typed": true
     },
@@ -380,7 +380,7 @@
       "probability": 0.02,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 206,
+      "ms": 155,
       "source": "decisions",
       "typed": true
     },
@@ -391,7 +391,7 @@
       "probability": 1,
       "verdict": "hold",
       "scam_type_pred": "unclear_pattern",
-      "ms": 184,
+      "ms": 183,
       "source": "decisions",
       "typed": false
     },
@@ -402,7 +402,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "unclear_pattern",
-      "ms": 180,
+      "ms": 152,
       "source": "decisions",
       "typed": false
     },
@@ -413,7 +413,7 @@
       "probability": 0.94,
       "verdict": "hold",
       "scam_type_pred": "unclear_pattern",
-      "ms": 161,
+      "ms": 145,
       "source": "decisions",
       "typed": false
     },
@@ -424,7 +424,7 @@
       "probability": 0.99,
       "verdict": "hold",
       "scam_type_pred": "unclear_pattern",
-      "ms": 173,
+      "ms": 159,
       "source": "decisions",
       "typed": false
     },
@@ -435,7 +435,7 @@
       "probability": 0.08,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 122,
+      "ms": 149,
       "source": "decisions",
       "typed": false
     },
@@ -446,7 +446,7 @@
       "probability": 0.05,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 209,
+      "ms": 145,
       "source": "decisions",
       "typed": false
     },
@@ -457,7 +457,7 @@
       "probability": 0.06,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 139,
+      "ms": 175,
       "source": "decisions",
       "typed": false
     },
@@ -468,10 +468,10 @@
       "probability": 0.12,
       "verdict": "allow",
       "scam_type_pred": "legitimate",
-      "ms": 139,
+      "ms": 151,
       "source": "decisions",
       "typed": false
     }
   ],
-  "generatedAt": "2026-10-10T06:40:38.596Z"
+  "generatedAt": "2026-10-10T07:00:22.977Z"
 }

@@ -1,16 +1,15 @@
 import "dotenv/config";
 import fs from "node:fs";
 import { decide } from "../src/decide.js";
-import { QUESTIONS, THRESHOLDS, buildInput } from "../src/guardian.js";
+import { QUESTIONS, THRESHOLDS, buildInput, verdictFor } from "../src/guardian.js";
 
 const cases = fs.readFileSync("data/eval.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l));
 
 async function run(c) {
   const { answers, ms, source } = await decide(buildInput({ payment: c.payment, context: c.context, situation: c.situation ?? null }), QUESTIONS);
-  const p = answers.is_scam.probability;
-  const risk = answers.risk.score;
-  const verdict = p >= THRESHOLDS.hold || risk >= 2.5 ? "hold" : p >= THRESHOLDS.warn || risk >= 1.5 ? "warn" : "allow";
-  return { id: c.id, label: c.label, scam_type: c.scam_type, probability: p, verdict, scam_type_pred: answers.scam_type.choice, ms, source, typed: Boolean(c.context) };
+  const p = answers.is_scam?.probability;
+  const { verdict } = verdictFor(p, answers.risk?.score, source); // the exact rule the product uses
+  return { id: c.id, label: c.label, scam_type: c.scam_type, probability: Number.isFinite(p) ? p : 0.5, verdict, scam_type_pred: answers.scam_type?.choice ?? "unclear_pattern", ms, source, typed: Boolean(c.context) };
 }
 
 const rows = [];
@@ -19,8 +18,9 @@ for (let i = 0; i < cases.length; i += 8) rows.push(...(await Promise.all(cases.
 const scams = rows.filter((r) => r.label === "scam");
 const legits = rows.filter((r) => r.label === "legit");
 const at = (th) => {
-  const tp = scams.filter((r) => r.probability >= th).length;
-  const fp = legits.filter((r) => r.probability >= th).length;
+  const flagged = (r) => (th === THRESHOLDS.hold ? r.verdict === "hold" : r.verdict !== "allow");
+  const tp = scams.filter(flagged).length;
+  const fp = legits.filter(flagged).length;
   return { threshold: th, recall: tp / scams.length, falsePositiveRate: fp / legits.length, precision: tp / Math.max(1, tp + fp), accuracy: (tp + legits.length - fp) / rows.length };
 };
 const lat = rows.map((r) => r.ms).sort((a, b) => a - b);

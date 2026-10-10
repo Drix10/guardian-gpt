@@ -8,16 +8,33 @@
 It reads the *whole situation* (the chat, the call, the screenshots, who is being paid) and makes one calibrated decision:
 **allow**, **warn**, or **hold for family approval**.
 
-Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (MCP + plugin extensions)** · **Agents API**
+**Built entirely on OpenAI's DevDay 2026 launches:**
+**Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins with plugin extensions** · **Agents API** · **Dots-ready family agent**
 
-`~185 ms per decision` · `19 of 19 scams held` · `0 of 19 genuine payments wrongly held` · `works with nothing typed` · `English + हिन्दी`
+`~185 ms per decision` · `19 of 19 scams held` · `0 of 19 genuine payments wrongly held` · `works with nothing typed` · `English + हिन्दी` · `34 automated tests`
 
 </div>
 
 ---
 
+## 🧩 What we built with OpenAI's newest platform
+
+| DevDay 2026 launch | What Guardian does with it | Where |
+|---|---|---|
+| **Decisions API** (`POST /v1/decisions`, `gpt-6-luna`) | **The core.** One call asks six bounded questions (3 red-flag *predicates*, *is it a scam*, a *choice* of 9 scam patterns, a 4-level *risk score*) over text **and screenshots**, and gets back **calibrated probabilities** in ~185 ms. Those probabilities drive a safe policy: act alone only when confident, otherwise involve a human. | [`src/decide.js`](src/decide.js), [`src/guardian.js`](src/guardian.js) |
+| **GPT-6.1 Sol** (`gpt-6.1-sol`) | Explains *why* a payment was paused, in plain **English or Hindi**, pointing to the 1930 helpline. Runs only on the few flagged payments; no big model sits in the decision path. | [`src/guardian.js`](src/guardian.js) |
+| **ChatGPT plugins + plugin extensions** (MCP server, MCP Apps widget, `@openai/mcp-extensions`) | `@Guardian` in ChatGPT returns a live verdict card with **Block / Approve** buttons. The **family dashboard lives in the ChatGPT sidebar** (`global` entrypoint) and conversation side panel (`thread`). Tools carry MCP safety annotations (`readOnlyHint`, `destructiveHint`). | [`src/mcp.js`](src/mcp.js), [`ui/widget.js`](ui/widget.js) |
+| **Agents API** (`client.beta.agents.sessions`, OpenAI-hosted) | An OpenAI-hosted **shopping agent** must call Guardian (over the same MCP server) before it pays. Lured to a lookalike Amazon checkout, it gets **HOLD 99%** and refuses, and the family is asked. Runs on `gpt-6-luna`. | [`scripts/agent-demo.js`](scripts/agent-demo.js) |
+| **Dots** (always-on agents) | A family member's Dot is the **responder after a hold**: researches the payee (`guardian_payee_report`), can **block on its own**, can **never approve** without the person's explicit yes. A `payment_held` webhook is ready to wake it (MCP Events-ready). | [`src/mcp.js`](src/mcp.js), [`src/notify.js`](src/notify.js) |
+| **Structured Outputs** | Automatic fallback on `gpt-6-luna` if the Decisions API is unreachable or refuses, normalised to the same answer shapes. If both fail, Guardian asks for a second look rather than waving money through. | [`src/decide.js`](src/decide.js) |
+
+**Why the Decisions API is the right primitive here:** a free-text model answer has to be parsed and its confidence isn't calibrated. The Decisions API returns bounded answers *with probabilities* in one call, billed on input tokens only. We measured our own Structured-Outputs fallback on the same questions at **~2.6 s vs ~0.26 s**: 10x slower, and no probabilities.
+
+---
+
 ## Contents
 
+- [What we built with OpenAI's newest platform](#-what-we-built-with-openais-newest-platform)
 - [The problem](#-the-problem)
 - [What Guardian does](#-what-guardian-does)
 - [How it works](#-how-it-works)
@@ -31,6 +48,8 @@ Built on the **OpenAI Decisions API** · **GPT-6.1 Sol** · **ChatGPT plugins (M
 - [API reference](#-api-reference)
 - [Project structure](#-project-structure)
 - [Cost and model budget](#-cost-and-model-budget)
+- [Testing](#-testing)
+- [Security and reliability](#-security-and-reliability)
 - [Limitations and roadmap](#-limitations-and-roadmap)
 
 ---
@@ -253,7 +272,9 @@ the phone shows *"Rahul blocked this payment. Your money is safe."* Then try **�
 | `npm run build` | Bundle the ChatGPT widget (esbuild) |
 | `npm start` | Start the API, web demo, and MCP server on `:8787` |
 | `npm run dev` | Build, then start |
-| `npm run eval` | Run the 30-case evaluation and write `web/eval.json` |
+| `npm test` | 34 unit + integration tests (no API calls, no cost) |
+| `npm run test:live` | 3 tests against the real Decisions API and GPT-6.1 Sol |
+| `npm run eval` | Run the 38-case evaluation and write `web/eval.json` |
 | `npm run agent-demo -- <mcp-url>` | Run the Agents API shopping agent that must ask Guardian before paying |
 
 ---
@@ -418,6 +439,33 @@ guardian-gpt/
 - **Decisions API:** $0.10 per 1M input tokens, **$0 for output**. A typical text-only check is ~300–750 input tokens, so it costs **well under $0.0001**: cheap enough to run on every payment.
 - **GPT-6.1 Sol:** called **only** for warn/hold verdicts, to write the explanation.
 - **No large reasoning model anywhere.** Decisions and the agent demo run on `gpt-6-luna`; only explanations use `gpt-6.1-sol`.
+
+---
+
+## ✅ Testing
+
+```bash
+npm test            # 34 tests, ~1 s, no API calls
+npm run test:live   # real Decisions API + GPT-6.1 Sol (a few cents)
+npm run eval        # 38 labelled payments → web/eval.json
+```
+
+The tests cover the verdict rule, the no-typing signals, input validation, the store's decision rules (no approving after a block), bounded memory, rate limits, the public-access gate, live updates and their cleanup, and every MCP tool, including that **approve is refused without a person's yes**.
+
+---
+
+## 🔒 Security and reliability
+
+| Risk | What Guardian does |
+|---|---|
+| Model returns an incomplete or refused answer | Rejected; falls back to Structured Outputs; if that fails too, **asks for a second look**. It never fails open to "allow". |
+| Slow or stuck API calls | Every call has a timeout and the whole check has a 20 s budget; explanations fall back to a canned message. |
+| Someone else using the public ChatGPT link | Only `/mcp` is reachable remotely (tunnel or Wi-Fi); the web demo, family decisions and reset are **localhost-only**. Optional `GUARDIAN_MCP_TOKEN` moves MCP to an unguessable path. |
+| Cost abuse | Separate rate limits for local and public traffic (30/min, 600/day public), so the public link can never starve the live demo. |
+| Prompt injection via scammer text | Model-written explanations are passed back to ChatGPT as fenced, quoted data; releasing money needs an explicit human confirmation. |
+| Approving after a block, double decisions | A payment can only be decided while it is waiting; later attempts get the true current state (HTTP 409). |
+| XSS from model output or typed fields | All dynamic text is escaped before rendering. |
+| Memory growth | Payments, webhook state and live-update listeners are all bounded and cleaned up. |
 
 ---
 

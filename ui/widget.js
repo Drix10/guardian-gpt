@@ -12,17 +12,19 @@ const LABELS = {
   pressure_or_secrecy: "Threats, rush or secrecy",
   payee_mismatch: "Payee doesn't fit the story",
 };
+const decider = (by = "") => (/agent/i.test(by) ? "Your assistant" : /web/i.test(by) ? "You (on the dashboard)" : "You");
 const STATUS = {
-  awaiting_family: "Waiting for your decision",
-  approved: "You approved this payment",
-  blocked: "You blocked this payment",
-  warned: "The payer was warned",
-  allowed: "Went through normally",
+  awaiting_family: () => "Waiting for your decision",
+  approved: (i) => `${decider(i.resolvedBy)} approved this payment`,
+  blocked: (i) => `${decider(i.resolvedBy)} blocked this payment`,
+  expired: () => "Nobody decided in time, so it did not go through",
+  warned: () => "The payer was warned",
+  allowed: () => "Went through normally",
 };
 const inr = (n) => Number(n ?? 0).toLocaleString("en-IN");
 // The stamp follows the payment's life: Held → Blocked / Approved.
-const stampFor = (i) => i.status === "blocked" ? ["Blocked", "hold"] : i.status === "approved" ? ["Approved", "allow"]
-  : [{ hold: "Held", warn: "Check", allow: "Clear" }[i.verdict], i.verdict];
+const stampFor = (i) => i.status === "blocked" ? ["Blocked", "hold"] : i.status === "approved" ? ["Approved", "allow"] : i.status === "expired" ? ["Expired", "warn"]
+  : [{ hold: "Held", warn: "Check", allow: "Clear" }[i.verdict] ?? "Check", i.verdict ?? "warn"];
 
 function bar(label, p) {
   const tone = p >= 0.8 ? "bad" : p >= 0.35 ? "warn" : "ok";
@@ -35,13 +37,13 @@ function verdictCard(item) {
   const actions = item.status === "awaiting_family"
     ? `<div class="g-actions"><button class="btn btn-primary g-block cursor-interaction" data-id="${item.id}" data-d="block">Block payment</button>
        <button class="btn cursor-interaction" data-id="${item.id}" data-d="approve">Approve payment</button></div>`
-    : `<div class="g-status ${item.status}">${STATUS[item.status] ?? item.status}</div>`;
+    : `<div class="g-status ${esc(item.status)}">${STATUS[item.status]?.(item) ?? esc(item.status)}</div>`;
   return `<section class="g-card">
     <span class="g-stamp ${tone}">${word}</span>
     <div class="g-amt">₹${inr(p.amount)} to ${esc(p.payeeName ?? p.payeeId ?? "unknown")}</div>
     <div class="g-sub">${esc(p.payeeId ?? "")}</div>
-    <div class="g-big">${pct(item.probability)}<small>chance this is a scam (${esc(item.scamType.replaceAll("_", " "))})</small></div>
-    ${item.signals.map((s) => bar(LABELS[s.name] ?? s.name, s.probability)).join("")}
+    <div class="g-big">${pct(item.probability)}<small>chance this is a scam (${esc(String(item.scamType ?? "").replaceAll("_", " "))})</small></div>
+    ${(item.signals ?? []).map((s) => bar(LABELS[s.name] ?? s.name, s.probability)).join("")}
     ${item.explanation ? `<p class="g-explain">${esc(item.explanation)}</p>` : ""}
     <div class="g-foot">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API" : "the fallback model"}</div>
     ${actions}
@@ -51,8 +53,15 @@ function verdictCard(item) {
 let view = "verdict";
 function render(data) {
   if (!data) return;
+  if (data.kind === "error") {
+    root.innerHTML = `<section class="g-card"><div class="g-amt">Guardian couldn't check this</div><p class="g-explain">${esc(data.message)}</p></section>`;
+    return;
+  }
   if (data.kind === "resolved") {
-    return view === "dashboard" ? render({ kind: "dashboard", items: data.items }) : data.item && render({ kind: "verdict", item: data.item });
+    if (view === "dashboard") return render({ kind: "dashboard", items: data.items ?? [] });
+    if (data.item) return render({ kind: "verdict", item: data.item });
+    root.innerHTML = `<section class="g-card"><div class="g-amt">${esc(data.message ?? "This payment no longer exists.")}</div></section>`;
+    return;
   }
   view = data.kind;
   if (data.kind === "verdict") {
@@ -70,10 +79,16 @@ root.addEventListener("click", async (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
   btn.disabled = true;
-  const result = btn.classList.contains("g-refresh")
-    ? await app.callServerTool({ name: "guardian_family_dashboard", arguments: {} })
-    : await app.callServerTool({ name: "guardian_resolve_payment", arguments: { id: btn.dataset.id, decision: btn.dataset.d } });
-  render(result.structuredContent);
+  try {
+    const result = btn.classList.contains("g-refresh")
+      ? await app.callServerTool({ name: "guardian_family_dashboard", arguments: {} })
+      : await app.callServerTool({ name: "guardian_resolve_payment", arguments: { id: btn.dataset.id, decision: btn.dataset.d } });
+    if (result?.structuredContent) render(result.structuredContent);
+    else btn.disabled = false;
+  } catch {
+    btn.disabled = false;
+    btn.textContent = "Try again";
+  }
 });
 
 function applyHostContext(ctx) {
@@ -81,6 +96,10 @@ function applyHostContext(ctx) {
   if (ctx?.styles?.variables != null) applyHostStyleVariables(ctx.styles.variables);
 }
 app.addEventListener("hostcontextchanged", applyHostContext);
-app.ontoolresult = (result) => render(result.structuredContent);
+app.ontoolresult = (result) => {
+  if (result.structuredContent) return render(result.structuredContent);
+  const text = (result.content ?? []).map((c) => c.text).filter(Boolean).join(" ");
+  render({ kind: "error", message: text || "Guardian didn't return a result." });
+};
 await app.connect();
 applyHostContext(app.getHostContext());

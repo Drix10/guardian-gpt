@@ -52,11 +52,14 @@ const SCENARIOS = [
 ];
 
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 let current = SCENARIOS[0];
 let images = [];
 let currentId = null;
 
 function loadScenario(s) {
+  payToken++;
+  inflight?.abort();
   current = s;
   images = [];
   resetPhone();
@@ -79,7 +82,7 @@ function noticed(s) {
   const x = s.situation;
   if (!x) return "";
   const rows = [];
-  if (x.onCall) rows.push(["Call", `${x.callType === "whatsapp_video" ? "WhatsApp video call" : "Phone call"} with an ${x.callerInContacts ? "saved contact" : "unknown number"}, ${x.callMinutes} min so far`, !x.callerInContacts]);
+  if (x.onCall) rows.push(["Call", `${{ whatsapp_video: "WhatsApp video call", whatsapp_audio: "WhatsApp voice call" }[x.callType] ?? "Phone call"} with ${x.callerInContacts === true ? "a saved contact" : x.callerInContacts === false ? "an unknown number" : "someone"}${x.callMinutes != null ? `, ${x.callMinutes} min so far` : ""}`, x.callerInContacts === false]);
   else if (x.onCall === false) rows.push(["Call", "Not on a call", false]);
   if (x.screenShareApp) rows.push(["Screen", `${x.screenShareApp} is open`, true]);
   if (x.usualMaxAmount) {
@@ -100,23 +103,41 @@ $("scenarios").addEventListener("click", (e) => {
 });
 
 // Screenshots → downscaled data URLs (the Decisions API takes base64 images inline).
+const MAX_IMAGES = 4;
 $("file").addEventListener("change", async (e) => {
+  const forScenario = current;
   for (const f of e.target.files) {
-    const url = await downscale(f);
-    images.push(url);
-    $("thumbs").insertAdjacentHTML("beforeend", `<img src="${url}">`);
+    if (images.length >= MAX_IMAGES) break;
+    try {
+      const url = await downscale(f);
+      if (current !== forScenario) break;
+      images.push(url);
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "Attached screenshot";
+      $("thumbs").append(img);
+    } catch {
+      // Not an image we can read: skip it.
+    }
   }
+  e.target.value = "";
 });
 function downscale(file, max = 1024) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const src = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
+      URL.revokeObjectURL(src);
       const k = Math.min(1, max / Math.max(img.width, img.height));
-      const c = Object.assign(document.createElement("canvas"), { width: img.width * k, height: img.height * k });
+      const c = Object.assign(document.createElement("canvas"), { width: Math.round(img.width * k), height: Math.round(img.height * k) });
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       resolve(c.toDataURL("image/jpeg", 0.85));
     };
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(src);
+      reject(new Error("unreadable image"));
+    };
+    img.src = src;
   });
 }
 
@@ -139,29 +160,49 @@ $("screen").addEventListener("change", (e) => {
   if (e.target.id === "language") language = e.target.value;
 });
 
+let payToken = 0;
+let inflight = null;
+
+// Put the payer's own edits back after an error, instead of resetting the scenario.
+function restoreForm(payment) {
+  resetPhone();
+  $("payeeName").value = payment.payeeName ?? "";
+  $("payeeId").value = payment.payeeId ?? "";
+  $("amount").value = Number.isFinite(payment.amount) ? payment.amount : "";
+  $("firstTime").checked = Boolean(payment.firstTime);
+  $("amtLabel").textContent = inr(payment.amount);
+}
+
 async function pay() {
+  const token = ++payToken;
+  inflight?.abort();
+  inflight = new AbortController();
   const payment = {
-    payeeName: $("payeeName").value, payeeId: $("payeeId").value, amount: Number($("amount").value),
+    payeeName: $("payeeName").value.trim(), payeeId: $("payeeId").value.trim(), amount: Number($("amount").value),
     firstTime: $("firstTime").checked, actor: current.payment.actor, note: current.payment.note,
   };
-  const context = current.chat.map(([who, t]) => `${who === "me" ? "PAYER" : "OTHER PARTY"}: ${t}`).join("\n");
+  const shots = [...images]; // exactly what is sent, even if more files finish loading meanwhile
+  const context = current.chat.map(([who, t]) => `${who === "me" ? "PAYER" : who === "sys" ? "CONTEXT" : "OTHER PARTY"}: ${t}`).join("\n");
   phoneLang = language;
   showPhone("checking");
   $("result").className = "result";
-  $("result").innerHTML = `<div class="spinner"></div><p>Reading the conversation and the payment…</p>`;
+  $("result").innerHTML = `<div class="spinner"></div><p>Reading the ${current.chat.length ? "conversation, the " : ""}phone's signals and the payment…</p>`;
   try {
     const res = await fetch("/api/check", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment, context, images, language, situation: current.situation ?? null }),
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: inflight.signal,
+      body: JSON.stringify({ payment, context, images: shots, language, situation: current.situation ?? null }),
     });
-    const item = await res.json();
+    const item = await res.json().catch(() => ({}));
+    if (token !== payToken) return;
     if (!res.ok) throw new Error(item.error ?? `HTTP ${res.status}`);
     currentId = item.id;
-    renderResult(item);
+    renderResult(item, shots.length);
     showPhone(item.verdict, item);
   } catch (err) {
-    loadScenario(current);
-    $("result").innerHTML = `<div class="verdict hold">Error: ${err.message}</div><p>Is the server running and is OPENAI_API_KEY set in .env?</p>`;
+    if (token !== payToken || err.name === "AbortError") return;
+    restoreForm(payment);
+    $("result").className = "result";
+    $("result").innerHTML = `<p class="error">Guardian couldn't decide: ${esc(err.message)}</p><p class="note">Your details are kept. Check that the server is running and OPENAI_API_KEY is set in .env, then press Pay again.</p>`;
   }
 }
 
@@ -176,28 +217,34 @@ const bar = (label, p, t = tone(p)) => `<div class="bar"><span>${label}</span><d
 const inr = (n) => Number(n ?? 0).toLocaleString("en-IN");
 
 // The stamp follows the payment's life: Held → Blocked / Approved.
-const STAMP = { hold: ["Held", "hold"], warn: ["Check", "warn"], allow: ["Clear", "allow"], blocked: ["Blocked", "hold"], approved: ["Approved", "allow"] };
+const STAMP = { hold: ["Held", "hold"], warn: ["Check", "warn"], allow: ["Clear", "allow"], blocked: ["Blocked", "hold"], approved: ["Approved", "allow"], expired: ["Expired", "warn"] };
 const STAMP_SUB = {
   hold: "Payment paused until family approves", warn: "Payment needs a second look", allow: "Payment goes through",
-  blocked: "Rahul blocked it from the family dashboard", approved: "Rahul approved it from the family dashboard",
+  blocked: "Blocked by the family", approved: "Approved by the family", expired: "Nobody decided in time; the payment did not go through",
+};
+const decider = (by = "") => (/agent/i.test(by) ? "Rahul's assistant" : /chatgpt/i.test(by) ? "Rahul (in ChatGPT)" : "Rahul");
+const POLICY = {
+  probability: "Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.",
+  risk: "Held because the risk was rated high even though the probability is under 80%: Guardian errs on the side of a pause.",
 };
 const stamp = (key) => `<span class="stamp land ${STAMP[key][1]}" id="verdictStamp">${STAMP[key][0]}</span>`;
 
-function renderResult(item) {
+function renderResult(item, nShots = 0) {
   const types = (item.scamTypeProbabilities ?? []).filter((t) => t.probability >= 0.02).sort((a, b) => b.probability - a.probability).slice(0, 3);
-  const shots = images.length ? ` and ${images.length} screenshot${images.length > 1 ? "s" : ""}` : "";
+  const shots = nShots ? ` and ${nShots} screenshot${nShots > 1 ? "s" : ""}` : "";
+  const by = { decisions: "the OpenAI Decisions API (gpt-6-luna)", fallback: "the fallback model", unavailable: "a cautious default (the models were unreachable)" }[item.source] ?? item.source;
   $("result").innerHTML = `
     <div class="verdict-row">
       <div class="big">${pct(item.probability)}<small>chance this is a scam</small></div>
       ${stamp(item.verdict)}
     </div>
     <p class="stamp-sub" id="stampSub">${STAMP_SUB[item.verdict]}</p>
-    ${item.signals.map((s) => bar(LABELS[s.name], s.probability)).join("")}
+    ${(item.signals ?? []).map((s) => bar(LABELS[s.name] ?? s.name, s.probability)).join("")}
     <h3>Which scam it looks like</h3>
-    ${types.map((t) => bar(t.value.replaceAll("_", " "), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
-    ${item.explanation ? `<div class="explain">${item.explanation}</div>` : ""}
-    <p class="meta">Decided in ${item.decisionsMs} ms by ${item.source === "decisions" ? "the OpenAI Decisions API (gpt-6-luna)" : "the fallback model"}: one call, six questions, ${current.chat.length ? "the chat and " : ""}the phone's signals${shots}.</p>
-    <p class="policy">Guardian holds at 80% or more, asks for a second look from 35%, and otherwise stays out of the way.</p>`;
+    ${types.map((t) => bar(String(t.value).replaceAll("_", " "), t.probability, t.value === "legitimate" ? "ok" : tone(t.probability))).join("")}
+    ${item.explanation ? `<div class="explain">${esc(item.explanation)}</div>` : ""}
+    <p class="meta">Decided in ${item.decisionsMs} ms by ${by}: one call, six questions, ${current.chat.length ? "the chat and " : ""}the phone's signals${shots}.</p>
+    <p class="policy">${item.verdict === "hold" && item.reason === "risk" ? POLICY.risk : POLICY.probability}</p>`;
 }
 
 const ICON = {
@@ -210,19 +257,19 @@ const ICON = {
 const PHONE = {
   en: {
     checking: "Guardian is checking…",
-    paid: (p) => `Paid ₹${inr(p.amount)}`, to: (p) => `to ${p.payeeName}`,
+    paid: (p) => `Paid ₹${inr(p.amount)}`, to: (p) => `to ${esc(p.payeeName || p.payeeId)}`,
     warnTitle: "Wait, this looks unusual", cancel: "Cancel payment",
     held: "Payment paused", onCall: "You're on a call with an unknown number. Real police never ask for money on a call. You can hang up.", waiting: "We've asked your son Rahul to confirm. You'll see his answer here.",
-    blocked: "Rahul blocked this payment. Your money is safe.", report: "To report it, call 1930 or visit cybercrime.gov.in",
-    approved: "Rahul approved it. Payment sent.", reset: "Start over",
+    blocked: (who) => `${who} blocked this payment. Your money is safe.`, report: "To report it, call 1930 or visit cybercrime.gov.in",
+    approved: (who) => `${who} approved it. Payment sent.`, expired: "Nobody confirmed in time, so the money was not sent.", reset: "Start over",
   },
   hi: {
     checking: "Guardian जाँच कर रहा है…",
-    paid: (p) => `₹${inr(p.amount)} का भुगतान हो गया`, to: (p) => `${p.payeeName} को`,
+    paid: (p) => `₹${inr(p.amount)} का भुगतान हो गया`, to: (p) => `${esc(p.payeeName || p.payeeId)} को`,
     warnTitle: "रुकिए, यह असामान्य लग रहा है", cancel: "भुगतान रद्द करें",
     held: "भुगतान रोका गया", onCall: "आप एक अनजान नंबर से कॉल पर हैं। असली पुलिस कभी कॉल पर पैसे नहीं माँगती। आप कॉल काट सकते हैं।", waiting: "हमने आपके बेटे राहुल से पुष्टि करने को कहा है। उनका जवाब यहीं दिखेगा।",
-    blocked: "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
-    approved: "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", reset: "फिर से शुरू करें",
+    blocked: () => "राहुल ने यह भुगतान रोक दिया। आपका पैसा सुरक्षित है।", report: "शिकायत के लिए 1930 पर कॉल करें या cybercrime.gov.in पर जाएँ",
+    approved: () => "राहुल ने मंज़ूरी दे दी। भुगतान भेज दिया गया।", expired: "समय पर किसी ने पुष्टि नहीं की, इसलिए पैसे नहीं भेजे गए।", reset: "फिर से शुरू करें",
   },
 };
 let phoneLang = "en";
@@ -234,28 +281,40 @@ function showPhone(state, item) {
   const t = PHONE[phoneLang] ?? PHONE.en;
   if (state === "checking") s.innerHTML = `<div class="ph ph-check"><div class="spinner"></div><p>${t.checking}</p></div>`;
   if (state === "allow") s.innerHTML = `<div class="ph ph-ok"><div class="ico">${ICON.ok}</div><h3>${t.paid(item.payment)}</h3><p>${t.to(item.payment)}</p></div>`;
-  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">${ICON.warn}</div><h3>${t.warnTitle}</h3><p>${item.explanation ?? ""}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
-  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">${ICON.hold}</div><h3>${t.held}</h3>${item.situation?.onCall && !item.situation?.callerInContacts ? `<p class="oncall">${t.onCall}</p>` : ""}<p>${item.explanation ?? ""}</p>
+  if (state === "warn") s.innerHTML = `<div class="ph ph-warn"><div class="ico">${ICON.warn}</div><h3>${t.warnTitle}</h3><p>${esc(item.explanation)}</p><button class="btn-pay" onclick="window.__reset()">${t.cancel}</button></div>`;
+  if (state === "hold") s.innerHTML = `<div class="ph ph-hold"><div class="ico">${ICON.hold}</div><h3>${t.held}</h3>${item.situation?.onCall && item.situation?.callerInContacts === false ? `<p class="oncall">${t.onCall}</p>` : ""}<p>${esc(item.explanation)}</p>
       <div class="waiting" id="waiting">${t.waiting}</div></div>`;
   s.insertAdjacentHTML("afterbegin", bar);
   s.insertAdjacentHTML("beforeend", `<button class="reset" onclick="window.__reset()">${t.reset}</button>`);
 }
 
-// Live updates when the family approves/blocks (from ChatGPT or the web dashboard).
-new EventSource("/api/events").onmessage = (e) => {
-  const item = JSON.parse(e.data);
-  if (item.reset || item.id !== currentId) return;
-  if (item.status !== "blocked" && item.status !== "approved") return;
+// Live updates when the family approves/blocks (from ChatGPT, the web dashboard or a family agent).
+function applyDecision(item) {
+  if (!item || item.id !== currentId || !["blocked", "approved", "expired"].includes(item.status)) return;
   const t = PHONE[phoneLang] ?? PHONE.en;
+  const who = decider(item.resolvedBy);
   if ($("waiting")) {
     $("waiting").outerHTML = item.status === "blocked"
-      ? `<div class="waiting done bad">${t.blocked}<br><small>${t.report}</small></div>`
-      : `<div class="waiting done ok">${t.approved}</div>`;
+      ? `<div class="waiting done bad">${t.blocked(who)}<br><small>${t.report}</small></div>`
+      : item.status === "approved"
+        ? `<div class="waiting done ok">${t.approved(who)}</div>`
+        : `<div class="waiting done">${t.expired}</div>`;
   }
   if ($("verdictStamp")) {
     $("verdictStamp").outerHTML = stamp(item.status);
-    $("stampSub").textContent = STAMP_SUB[item.status];
+    $("stampSub").textContent = item.status === "expired" ? STAMP_SUB.expired : `${STAMP_SUB[item.status]} (${who})`;
   }
+}
+const stream = new EventSource("/api/events");
+stream.onmessage = (e) => {
+  const item = JSON.parse(e.data);
+  if (!item.reset) applyDecision(item);
+};
+// A missed event (reconnect, server restart) can't strand the phone on "waiting".
+stream.onopen = async () => {
+  if (!currentId || !$("waiting")) return;
+  const all = await fetch("/api/payments").then((r) => r.json()).catch(() => []);
+  applyDecision(Array.isArray(all) ? all.find((p) => p.id === currentId) : null);
 };
 
 window.__reset = () => loadScenario(current);

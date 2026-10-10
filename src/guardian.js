@@ -1,4 +1,4 @@
-import { client, decide } from "./decide.js";
+import { getClient, decide } from "./decide.js";
 
 export const SCAM_TYPES = [
   { value: "digital_arrest", description: "Fake police/CBI/customs/court threatening arrest and demanding payment" },
@@ -30,7 +30,20 @@ export const QUESTIONS = [
 ];
 
 // Calibrated policy: act alone only when confident, otherwise involve a human.
-export const THRESHOLDS = { hold: 0.8, warn: 0.35 };
+export const THRESHOLDS = { hold: 0.8, warn: 0.35, riskHold: 2.5, riskWarn: 1.5 };
+
+// The single verdict rule (used by the API, MCP, eval and UI copy).
+// Fallback risk is a whole level (0-3), so "high" (2) holds there; Decisions scores are continuous.
+export function verdictFor(p, risk, source = "decisions") {
+  const prob = Number.isFinite(p) ? p : 0.5;
+  const r = Number.isFinite(risk) ? risk : 1.5;
+  const riskHold = source === "decisions" ? THRESHOLDS.riskHold : 2;
+  if (prob >= THRESHOLDS.hold) return { verdict: "hold", reason: "probability" };
+  if (r >= riskHold) return { verdict: "hold", reason: "risk" };
+  if (prob >= THRESHOLDS.warn) return { verdict: "warn", reason: "probability" };
+  if (r >= THRESHOLDS.riskWarn) return { verdict: "warn", reason: "risk" };
+  return { verdict: "allow", reason: "probability" };
+}
 
 // Signals a UPI / bank app can collect on its own (permission given once, in advance).
 // The payer types nothing; these are written out in plain words for the model.
@@ -40,7 +53,9 @@ export function describeSituation(s, payment = {}) {
   const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
   if (s.onCall) {
     const kind = { whatsapp_video: "a WhatsApp video call", whatsapp_audio: "a WhatsApp voice call", phone: "a phone call" }[s.callType] ?? "a call";
-    const who = s.callerInContacts ? "someone saved in their contacts" : "an unknown number that is NOT in their contacts";
+    // Only claim "unknown number" when the app actually knows it; an absent value is not a red flag.
+    const who = s.callerInContacts === true ? "someone saved in their contacts"
+      : s.callerInContacts === false ? "an unknown number that is NOT in their contacts" : "a caller (contact status not known)";
     out.push(`The payer is on ${kind} RIGHT NOW with ${who}${s.callMinutes != null ? `; the call has lasted ${s.callMinutes} minutes` : ""}.`);
   } else if (s.onCall === false) {
     out.push("The payer is not on any call.");
@@ -50,7 +65,9 @@ export function describeSituation(s, payment = {}) {
     const x = payment.amount / s.usualMaxAmount;
     out.push(x >= 2
       ? `This payment is ${Math.round(x)}x the payer's usual largest payment (${inr(s.usualMaxAmount)}).`
-      : `This amount is within the payer's normal range (usual largest payment ${inr(s.usualMaxAmount)}).`);
+      : x > 1
+        ? `This payment is somewhat larger than the payer's usual largest payment (${x.toFixed(1)}x of ${inr(s.usualMaxAmount)}).`
+        : `This amount is within the payer's normal range (usual largest payment ${inr(s.usualMaxAmount)}).`);
   }
   if (s.payeeInContacts != null) out.push(s.payeeInContacts ? "The payee is a saved contact of the payer." : "The payee is not in the payer's contacts.");
   if (s.payeeVerifiedMerchant) out.push("The payee is a verified merchant (checked by the payment network).");
@@ -79,28 +96,33 @@ export function buildInput({ payment = {}, context = "", images = [], situation 
     lines.push("");
   }
   lines.push("WHAT HAPPENED BEFORE THE PAYMENT (messages, calls, screens the payer chose to share):");
-  lines.push(context || "(nothing shared: the payer did not type or upload anything; judge from the signals above)");
+  lines.push(String(context ?? "").slice(0, 20000) || "(nothing shared: the payer did not type or upload anything; judge from the signals above)");
   const text = lines.filter((l) => l !== null).join("\n");
   const content = [{ type: "input_text", text }];
-  for (const url of images) content.push({ type: "input_image", image_url: url });
+  for (const url of images.slice(0, 4)) content.push({ type: "input_image", image_url: url });
   return [{ role: "user", content }];
 }
 
-export async function assess({ payment, context, images = [], language = "en", situation = null }) {
-  const { answers, source, ms } = await decide(buildInput({ payment, context, images, situation }), QUESTIONS);
-  const p = answers.is_scam?.probability ?? 0;
-  const risk = answers.risk?.score ?? 0;
-  const verdict = p >= THRESHOLDS.hold || risk >= 2.5 ? "hold" : p >= THRESHOLDS.warn || risk >= 1.5 ? "warn" : "allow";
+// Whole check (decision + explanation) stays inside one time budget.
+const BUDGET_MS = 20_000;
+
+export async function assess({ payment = {}, context = "", images = [], language = "en", situation = null }) {
+  const deadline = Date.now() + BUDGET_MS;
+  const { answers, source, ms } = await decide(buildInput({ payment, context, images, situation }), QUESTIONS, { deadline });
+  const p = answers.is_scam?.probability;
+  const risk = answers.risk?.score;
+  const { verdict, reason } = verdictFor(p, risk, source);
   const signals = ["impersonates_authority", "pressure_or_secrecy", "payee_mismatch"].map((name) => ({
     name,
     probability: answers[name]?.probability ?? 0,
   }));
   const result = {
     verdict,
-    probability: p,
-    risk,
+    reason,
+    probability: Number.isFinite(p) ? p : 0.5,
+    risk: Number.isFinite(risk) ? risk : 1.5,
     riskProbabilities: answers.risk?.probabilities ?? [],
-    scamType: answers.scam_type?.choice ?? "legitimate",
+    scamType: answers.scam_type?.choice ?? "unclear_pattern",
     scamTypeProbabilities: answers.scam_type?.probabilities ?? [],
     signals,
     decisionsMs: ms,
@@ -110,29 +132,40 @@ export async function assess({ payment, context, images = [], language = "en", s
     language,
   };
   const evidence = [...describeSituation(situation, payment), context].filter(Boolean).join("\n");
-  result.explanation = verdict === "allow" ? null : await explain(result, evidence, language);
+  result.explanation = verdict === "allow" ? null : await explain(result, evidence, language, deadline);
   return result;
 }
 
 const LANGS = { en: "simple English", hi: "simple Hindi (Devanagari script)" };
 
-async function explain(result, context, language) {
+const FALLBACK_EXPLANATION = {
+  en: { hold: "Guardian paused this payment because it looks like a scam. Please talk to a family member before sending money.", warn: "This payment looks unusual. Please check with a family member before sending money." },
+  hi: { hold: "यह भुगतान धोखाधड़ी जैसा लग रहा है, इसलिए Guardian ने इसे रोक दिया है। पैसे भेजने से पहले परिवार के किसी सदस्य से बात करें।", warn: "यह भुगतान असामान्य लग रहा है। पैसे भेजने से पहले परिवार के किसी सदस्य से पूछ लें।" },
+};
+
+async function explain(result, context, language, deadline = Date.now() + 10_000) {
+  const remaining = deadline - Date.now();
+  if (remaining < 1_500) return (FALLBACK_EXPLANATION[language] ?? FALLBACK_EXPLANATION.en)[result.verdict];
   const flags = result.signals.filter((s) => s.probability >= 0.5).map((s) => s.name).join(", ") || "none";
+  const what = result.verdict === "hold"
+    ? "why this payment was paused and is waiting for a family member"
+    : "why this payment needs a second look before sending (it has NOT been paused)";
   try {
-    const res = await client.responses.create({
+    const res = await getClient().responses.create({
       model: "gpt-6.1-sol",
       instructions:
         `You are Guardian, protecting an elderly person from payment scams. In ${LANGS[language] ?? LANGS.en}, ` +
-        "write at most 3 short sentences: why this payment was paused, and exactly what to do now. " +
+        `write at most 3 short sentences: ${what}, and exactly what to do now. ` +
         "Warm, calm, no jargon. Never tell them they are stupid. Real police never ask for money on a call. " +
         "Write rupee amounts in the Indian format exactly as given (for example ₹4,50,000).",
       input:
         `Verdict: ${result.verdict}. Scam pattern: ${result.scamType}. Red flags: ${flags}. ` +
-        `Payment: ₹${Number(result.payment?.amount ?? 0).toLocaleString("en-IN")} to ${result.payment?.payeeName} (${result.payment?.payeeId}).\nContext:\n${context}`.slice(0, 4000),
-    });
-    return res.output_text.trim();
+        `Payment: ₹${Number(result.payment?.amount ?? 0).toLocaleString("en-IN")} to ${result.payment?.payeeName ?? "unknown"} (${result.payment?.payeeId ?? "unknown"}).\nContext:\n${String(context).slice(0, 4000)}`,
+    }, { timeout: Math.min(remaining, 10_000) });
+    const out = res.output_text?.trim();
+    if (out) return out;
   } catch (err) {
     console.warn("[explain] failed:", err.status ?? err.message);
-    return "Guardian paused this payment because it looks like a scam. Please talk to a family member before sending money.";
   }
+  return (FALLBACK_EXPLANATION[language] ?? FALLBACK_EXPLANATION.en)[result.verdict] ?? FALLBACK_EXPLANATION.en.hold;
 }

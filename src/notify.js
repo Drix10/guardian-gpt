@@ -1,13 +1,20 @@
+import { createHmac } from "node:crypto";
 import * as store from "./store.js";
 
 // Tell the family the moment a payment is held. MCP Events (which can wake a ChatGPT Dot) need a newer MCP SDK,
 // so for now this is a plain webhook: point FAMILY_WEBHOOK_URL at anything that can reach Rahul
 // (an automation, a bot, or an MCP Events bridge).
 const url = process.env.FAMILY_WEBHOOK_URL;
-const sent = new Set();
+const secret = process.env.FAMILY_WEBHOOK_SECRET; // optional: receiver can verify X-Guardian-Signature
+const sent = new Set(); // ids notified and still waiting; removed once decided, so it stays small
 
+store.events.on("reset", () => sent.clear());
 store.events.on("update", async (item) => {
-  if (!url || item.status !== "awaiting_family" || sent.has(item.id)) return;
+  if (item.status !== "awaiting_family") {
+    sent.delete(item.id);
+    return;
+  }
+  if (!url || sent.has(item.id)) return;
   sent.add(item.id);
   const data = {
     id: item.id,
@@ -18,9 +25,17 @@ store.events.on("update", async (item) => {
     scamType: item.scamType,
     explanation: item.explanation,
   };
-  try {
-    await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "payment_held", timestamp: new Date().toISOString(), data }) });
-  } catch (err) {
-    console.warn("[notify] webhook failed:", err.message);
+  const body = JSON.stringify({ type: "payment_held", timestamp: new Date().toISOString(), data });
+  const headers = { "Content-Type": "application/json" };
+  if (secret) headers["X-Guardian-Signature"] = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(5_000) });
+      if (res.ok) return;
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      console.warn(`[notify] webhook attempt ${attempt} failed:`, err.message);
+    }
   }
+  sent.delete(item.id); // never delivered: allow a later update to try again
 });

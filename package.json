@@ -4,12 +4,13 @@
   "description": "Guardian: the decision layer for payments. Stops scams at the moment of payment with the OpenAI Decisions API.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/unit.test.js test/api.test.js",
     "build": "esbuild ui/widget.js --bundle --format=esm --minify --outfile=dist/widget.js",
     "start": "node src/server.js",
     "eval": "node scripts/eval.js",
     "dev": "npm run build && npm start",
-    "agent-demo": "node scripts/agent-demo.js"
+    "agent-demo": "node scripts/agent-demo.js",
+    "test:live": "node --test test/live.test.js"
   },
   "keywords": [],
   "author": "",

@@ -548,3 +548,17 @@ Real police, courts and banks **never** ask you to pay over a call to "clear you
 Built at the **OpenAI Codex Community Hackathon · Bengaluru · October 2026** by **Drishtant Ghosh** ([Drix10.com](https://drix10.com))
 
 </div>
+
+
+<!-- drix10-footer -->
+---
+
+<div align="center">
+
+**Built by [Drishtant Ghosh (Drix10)](https://drix10.com)** · AI systems engineer and 1x acquired founder, Bengaluru
+
+[Portfolio](https://drix10.com) · [LinkedIn](https://www.linkedin.com/in/drix10) · [X](https://x.com/DrishtantGhosh) · [Blog](https://blogs.drix10.com) · [All projects](https://github.com/Drix10)
+
+<sub>More from Drix10: [Agent Flow](https://github.com/Drix10/agent-flow) (guardrails for AI coding agents) · [MiroHedge](https://github.com/Drix10/hypothesis-arena) (AI-assisted systematic fund) · [Sentinel](https://github.com/Drix10/sentinal) (AI security CLI) · [Keystroke-LLM](https://github.com/Drix10/keystroke-llm) (NumPy transformer on a keyboard) · [AI Resources](https://github.com/Drix10/ai-resources) (daily AI knowledge base)</sub>
+
+</div>
